@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var util = require('util');
 var exec = require('child_process').exec;
+var d3 = require('d3-queue');
 
 var OSM = require('./build_osm');
 var classes = require('./data_classes');
@@ -49,9 +50,9 @@ module.exports = function () {
             // remove tags that describe expected test result, reject empty tags
             var tags = {};
             for (var key in row) {
-                if (!key.match(/^forw/) &&
-                    !key.match(/^backw/) &&
-                    !key.match(/^bothw/) &&
+                if (!key.match(/^forw\b/) &&
+                    !key.match(/^backw\b/) &&
+                    !key.match(/^bothw\b/) &&
                     row[key].length)
                     tags[key] = row[key];
             }
@@ -96,7 +97,7 @@ module.exports = function () {
     // function Node(id, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID, lon, lat, tags) {
         id = id || this.makeOSMId();
         var node = new OSM.Node(id, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID, lon, lat, {name: name});
-        OSM.DB.addNode(node);
+        this.OSMDB.addNode(node);
         this.nameNodeHash[name] = node;
     }
 
@@ -105,8 +106,8 @@ module.exports = function () {
     }
 
     this.findNodeByName = (s) => {
-        if (s.size !== 1) callback(new Error(util.format('*** invalid node name "%s", must be single characters', s)));
-        if (!s.match(/[a-z0-9]/)) callback(new Error(util.format('*** invalid node name "%s", must be alphanumeric', s)));
+        if (s.length !== 1) throw new Error(util.format('*** invalid node name "%s", must be single characters', s));
+        if (!s.match(/[a-z0-9]/)) throw new Error(util.format('*** invalid node name "%s", must be alphanumeric', s));
 
         var fromNode;
         if (s.match(/[a-z]/)) {
@@ -123,14 +124,16 @@ module.exports = function () {
     }
 
     this.resetData = () => {
-        clearFiles(this.TEST_FOLDER, /\.log$/);
-        clearFiles(this.DATA_FOLDER, /$test\./);
+        // TODO these are commented out in rb...?
+        // clearFiles(this.TEST_FOLDER, /\.log$/);
+        // clearFiles(this.DATA_FOLDER, /$test\./);
         this.resetProfile();
         this.resetOSM();
-        this._fingerprintOSM = '';
-        this.fingerprintExtract = null;
-        this.fingerprintPrepare = null;
-        this.fingerprintRoute = null;
+        // this._fingerprintOSM = '';
+        // TODO also class-ify
+        // this.fingerprintExtract = null;
+        // this.fingerprintPrepare = null;
+        // this.fingerprintRoute = null;
     }
 
     function clearFiles (dir, re) {
@@ -149,33 +152,35 @@ module.exports = function () {
 
     this.resetOSM = () => {
         this.OSMDB.clear();
+        this.osmData.reset();
         this.nameNodeHash = {};
         this.locationHash = {};
         this.nameWayHash = {};
-        this.osmHash = null;
+        // this.osmStr.clear();
+        // this.osmHash = null;
         this.osmID = 0;
     }
 
     this.writeOSM = (callback) => {
         if (!fs.existsSync(this.DATA_FOLDER)) fs.mkdirSync(this.DATA_FOLDER);
-        var osmPath = path.resolve(this.DATA_FOLDER, util.format('%s.osm', this.osmFile));
+        var osmPath = path.resolve(this.DATA_FOLDER, util.format('%s.osm', this.osmData.osmFile));
         if (!fs.existsSync(osmPath)) {
-            fs.writeFile(osmPath, this.OSMDB.toXML(), callback);
+            fs.writeFile(osmPath, this.osmData.str, callback);
         } else callback();
     }
 
     this.extracted = () => {
-        return fs.existsSync(util.format('%s.osrm', this.extractedFile)) &&
-            fs.existsSync(util.format('%s.osrm.names', this.extractedFile)) &&
-            fs.existsSync(util.format('%s.osrm.restrictions', this.extractedFile));
+        return fs.existsSync(util.format('%s.osrm', this.osmData.extractedFile)) &&
+            fs.existsSync(util.format('%s.osrm.names', this.osmData.extractedFile)) &&
+            fs.existsSync(util.format('%s.osrm.restrictions', this.osmData.extractedFile));
     }
 
     this.prepared = () => {
-        return fs.existsSync(util.format('%s.osrm.hsgr', this.preparedFile));
+        return fs.existsSync(util.format('%s.osrm.hsgr', this.osmData.preparedFile));
     }
 
     this.writeTimestamp = (callback) => {
-        fs.writeFile(util.format('%s.osrm.timestamp', this.preparedFile), this.OSM_TIMESTAMP, callback);
+        fs.writeFile(util.format('%s.osrm.timestamp', this.osmData.preparedFile), this.OSM_TIMESTAMP, callback);
     }
 
     this.writeInputData = (callback) => {
@@ -184,57 +189,75 @@ module.exports = function () {
     }
 
     this.extractData = (callback) => {
+        console.log('extract');
         this.logPreprocessInfo();
-        this.log(util.format('== Extracting %s.osm...', this.osmFile), 'preprocess');
+        this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
         // TODO replace with lib?? or just w runBin cmd
         exec(util.format('%s%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
-            this.LOAD_LIBRARIES, this.BIN_PATH, this.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
+            this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
+            console.log("HI", err, stdout, stderr)
             if (err) {
+                console.log("EXTRACT ERROR")
                 this.log(util.format('*** Exited with code %d', err.code), 'preprocess');
                 return callback(this.ExtractError(err.code, util.format('osrm-extract exited with code %d', err.code)));
             }
 
             ['osrm','osrm.names','osrm.restrictions','osrm.ebg','osrm.enw','osrm.edges','osrm.fileIndex','osrm.geometry','osrm.nodes','osrm.ramIndex'].forEach((file) => {
-                this.log(util.format('Renaming %s.%s to %s.%s', this.osmFile, file, this.extractedFile, file), 'preprocess');
-                fs.rename([this.osmFile, file].join('.'), [this.extractedFile, file].join('.'), (err) => {
+                this.log(util.format('Renaming %s.%s to %s.%s', this.osmData.osmFile, file, this.osmData.extractedFile, file), 'preprocess');
+                fs.rename([this.osmData.osmFile, file].join('.'), [this.osmData.extractedFile, file].join('.'), (err) => {
                     if (err) return callback(this.FileError(null, 'failed to rename data file after extracting'));
                 });
             });
-
+            console.log('extracted')
             callback();
         });
     }
 
     this.prepareData = (callback) => {
+        console.log('prepare')
         this.logPreprocessInfo();
-        this.log(util.format('== Preparing %s.osm...', this.extractedFile), 'preprocess');
+        this.log(util.format('== Preparing %s.osm...', this.osmData.extractedFile), 'preprocess');
         exec(util.format('%s%s/osrm-prepare %s.osrm  --profile %s/%s.lua >>%s 2>&1',
-            this.LOAD_LIBRARIES, this.BIN_PATH, this.extractedFile, this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
+            this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.extractedFile, this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
             if (err) {
                 this.log(util.format('*** Exited with code %d', err.code), 'preprocess');
                 return callback(this.PrepareError(err.code, util.format('osrm-prepare exited with code %d', err.code)));
             }
 
-            ['osrm.hsgr','osrm.fileIndex','osrm.geometry','osrm.nodes','osrm.ramIndex','osrm.core','osrm.edges'].forEach((file) => {
-                this.log(util.format('Renaming %s.%s to %s.%s', this.extractedFile, file, this.preparedFile, file), 'preprocess');
-                fs.rename([this.extractedFile, file].join('.'), [this.preparedFile, file].join('.'), (err) => {
-                    if (err) return callback(this.FileError(null, 'failed to rename data file after preparing.'));
+            var rename = (file, cb) => {
+                this.log(util.format('Renaming %s.%s to %s.%s', this.osmData.extractedFile, file, this.osmData.preparedFile, file), 'preprocess');
+                fs.rename([this.osmData.extractedFile, file].join('.'), [this.osmData.preparedFile, file].join('.'), (err) => {
+                    if (err) return cb(this.FileError(null, 'failed to rename data file after preparing.'));
+                    cb();
                 });
-            });
+            }
 
-            // TODO think i'm going to need to queue here, getting into some async trouble
-            ['osrm.names','osrm.restrictions','osrm'].forEach((file) => {
-                this.log(util.format('Copying %s.%s to %s.%s', this.extractedFile, file, this.preparedFile, file), 'preprocess');
-                fs.createReadStream([this.extractedFile, file].join('.'))
-                    .pipe(fs.createWriteStream([this.preparedFile, file].join('.')))
+            var copy = (file, cb) => {
+                this.log(util.format('Copying %s.%s to %s.%s', this.osmData.extractedFile, file, this.osmData.preparedFile, file), 'preprocess');
+                fs.createReadStream([this.osmData.extractedFile, file].join('.'))
+                    .pipe(fs.createWriteStream([this.osmData.preparedFile, file].join('.'))
+                            .on('finish', cb)
+                        )
                     .on('error', (err) => {
-                        return callback(this.FileError(null, 'failed to copy data after preparing.'));
+                        return cb(this.FileError(null, 'failed to copy data after preparing.'));
                     });
+            }
+
+            var q = d3.queue();
+
+            ['osrm.hsgr','osrm.fileIndex','osrm.geometry','osrm.nodes','osrm.ramIndex','osrm.core','osrm.edges'].forEach((file) => {
+                q.defer(rename, file);
             });
 
-            this.log('', 'preprocess');
+            ['osrm.names','osrm.restrictions','osrm'].forEach((file) => {
+                q.defer(copy, file);
+            });
 
-            callback();
+            q.awaitAll((err) => {
+                this.log('', 'preprocess');
+                console.log('prepared')
+                callback(err);
+            });
         });
     }
 
@@ -244,11 +267,18 @@ module.exports = function () {
         var _extract = !this.extracted() ? this.extractData : noop;
         var _prepare = !this.prepared() ? this.prepareData : noop;
 
-        this.writeInputData(() => {
-            _extract(() => {
-                _prepare(() => {
-                    this.logPreprocessDone();
-                    callback();
-                })})});
+        this.osmData.populate(() => {
+            this.writeInputData(() => {
+                console.log('_extract')
+                _extract(() => {
+                    console.log('_prepare')
+                    _prepare(() => {
+                        this.logPreprocessDone();
+                        callback();
+                    });
+                });
+            });
+        });
+
     }
 }

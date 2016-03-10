@@ -1,5 +1,8 @@
 'use strict';
 
+var path = require('path');
+var sha1 = require('sha1');
+
 module.exports = {
     Location: class {
         constructor (lon, lat) {
@@ -8,17 +11,56 @@ module.exports = {
         }
     },
 
-    _osmStr: class {
-        constructor (DB) {
-            this.str = null;
-            this.DB = DB;
+    osmData: class {
+        constructor (scope) {
+            this.scope          = scope;
+            this.str            = null;
+            this.hash           = null;
+            this.fingerprintOSM = null;
+            this.osmFile        = null;
+            this.extractedFile  = null;
+            this.preparedFile   = null;
         }
 
-        get xml () {
-            if (!this.str) this.str = this.DB.toXML();
-            return this.str;
+        populate (callback) {
+            this.scope.OSMDB.toXML((str) => {
+                this.str = str;
+                // TODO this is ported from the double-hash in rb, but is it an oversight?
+                this.hash = sha1(str);
+                this.fingerprintOSM = sha1(this.hash);
+                this.osmFile = path.resolve(this.scope.DATA_FOLDER, this.fingerprintOSM);
+                this.extractedFile = path.resolve([this.osmFile, this.scope.fingerprintExtract].join('_'));
+                this.preparedFile = path.resolve([this.osmFile, this.scope.fingerprintExtract, this.scope.fingerprintPrepare].join('_'));
+
+                callback();
+            });
+        }
+
+        reset () {
+            this.str            = null;
+            this.hash           = null;
+            this.fingerprintOSM = null;
+            this.osmFile        = null;
+            this.extractedFile  = null;
+            this.preparedFile   = null;
         }
     },
+
+    // _osmStr: class {
+    //     constructor (DB) {
+    //         this.str = null;
+    //         this.DB = DB;
+    //     }
+
+    //     get xml () {
+    //         if (!this.str) this.str = this.DB.toXML();
+    //         return this.str;
+    //     }
+
+    //     clear () {
+    //         this.str = null;
+    //     }
+    // },
 
     FuzzyMatch: class {
         match (got, want) {

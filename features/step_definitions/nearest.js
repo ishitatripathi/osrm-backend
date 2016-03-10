@@ -5,7 +5,7 @@ module.exports = function () {
         this.reprocess();
         var actual = [];
 
-        this.OSRMLoader.load(this, util.format('%s.osrm', this.preparedFile), () => {
+        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
             table.hashes().forEach((row, ri) => {
                 var inNode = this.findNodeByName(row.in);
                 if (!inNode) throw new Error(util.format('*** unknown in-node "%s"'), row.in);

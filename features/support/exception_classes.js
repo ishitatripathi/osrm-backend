@@ -108,7 +108,6 @@ module.exports = {
                     else if (row.status === 'undefined') rowString += '(-) ' + row[header] + ' | ';
                     else rowString += '(+) ' + row[header] + ' | ';
                 });
-                rowString += ' |';
                 s.push(rowString);
             });
             return s.join('\n') + '\n\nTODO spacing/formatting';

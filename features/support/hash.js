@@ -15,23 +15,8 @@ module.exports = function () {
         return sha1(buf);
     }
 
-    this.profileHash = () => {
-        this.profileHashes = this.profileHashes || {};
-        if (!this.profileHashes[this.profile]) this.profileHashes[this.profile] = this.hashOfFiles(path.resolve(this.PROFILES_PATH, this.profile + '.lua'));
-    }
-
-    var osmHash = this.osmHash = () => {
-        if (!this._osmHash.length) {
-            this._osmHash = sha1(this.osmStr.xml || '');
-        }
-        return this._osmHash;
-    }
-
-    this.fingerprintOSM = () => {
-        if (!this._fingerprintOSM.length) {
-            this._fingerprintOSM = sha1(osmHash());
-        }
-        return this._fingerprintOSM;
+    this.hashProfile = () => {
+        return this.hashOfFiles(path.resolve(this.PROFILES_PATH, this.profile + '.lua'));
     }
 
     return this;

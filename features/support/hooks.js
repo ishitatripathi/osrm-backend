@@ -1,7 +1,14 @@
+var util = require('util');
 var Timeout = require('node-timeout');
 
 module.exports = function () {
     // this.STRESS_TIMEOUT = 300;
+
+    this.BeforeFeatures((features, callback) => {
+        this.initializeEnv(() => {
+            this.initializeOptions(callback);
+        });
+    });
 
     this.Before((scenario, callback) => {
         // fetch scenario and feature name, so we can use it in log files if needed
@@ -18,12 +25,8 @@ module.exports = function () {
           //     @feature_name = scenario.scenario_outline.feature.name
           //     @scenario_title = scenario.scenario_outline.name
           // end
-        this.initializeEnv(() => {
-            this.initializeOptions(callback);
-        });
-
-        this.featureName = scenario.feature.name;
-        this.scenarioTitle = scenario.name;
+        this.scenarioTitle = scenario.getName();
+        // this.scenarioTitle = scenario.name;
 
         this.loadMethod = this.DEFAULT_LOAD_METHOD;
         this.queryParams = [];
@@ -34,6 +37,7 @@ module.exports = function () {
         this.hasLoggedScenarioInfo = false;
         this.setGridSize(this.DEFAULT_GRID_SIZE);
         this.setOrigin(this.DEFAULT_ORIGIN);
+        callback();
     });
 
     this.Around('@stress', (scenario, block, callback) => {

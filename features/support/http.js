@@ -12,7 +12,7 @@ module.exports = function () {
     this.sendRequest = (baseUri, parameters, callback) => {
         var limit = Timeout(this.OSRM_TIMEOUT, { err: { statusCode: 408 } });
 
-        var runRequest = () => {
+        var runRequest = (cb) => {
             var uriString = baseUri,
                 params = this.paramsToString(parameters);
 
@@ -31,18 +31,20 @@ module.exports = function () {
                     throw new Error();
                 }
 
-                return callback(err, res, body);
+                return cb(err, res, body);
             });
         }
+        // TODO reimplement timeout
+        runRequest(callback);
 
-        runRequest(limit((err, res, body) => {
-            if (err) {
-                if (err.statusCode === 408)
-                    return callback(this.RoutedError('*** osrm-routed did not respond'));
-                else if (err.code === 'ECONNREFUSED')       // TODO is this right?
-                    return callback(this.RoutedError('*** osrm-routed is not running'));
-            }
-            return callback(err, res, body);
-        }));
+        // runRequest(limit((err, res, body) => {
+        //     if (err) {
+        //         if (err.statusCode === 408)
+        //             return callback(this.RoutedError('*** osrm-routed did not respond'));
+        //         else if (err.code === 'ECONNREFUSED')       // TODO is this right?
+        //             return callback(this.RoutedError('*** osrm-routed is not running'));
+        //     }
+        //     return callback(err, res, body);
+        // }));
     }
 }

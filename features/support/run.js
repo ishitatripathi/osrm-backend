@@ -7,18 +7,18 @@ module.exports = function () {
         var opts = options.slice();
 
         if (opts.match('{osmBase}')) {
-            if (!this.osmFile) throw new Error('*** {osmBase} is missing');
-            opts = opts.replace('{osmBase}', this.osmFile);
+            if (!this.osmData.osmFile) throw new Error('*** {osmBase} is missing');
+            opts = opts.replace('{osmBase}', this.osmData.osmFile);
         }
 
         if (opts.match('{extractedBase}')) {
-            if (!this.extractedFile) throw new Error('*** {extractedBase} is missing');
-            opts = ops.replace('{extractedBase}', this.extractedFile);
+            if (!this.osmData.extractedFile) throw new Error('*** {extractedBase} is missing');
+            opts = ops.replace('{extractedBase}', this.osmData.extractedFile);
         }
 
         if (opts.match('{preparedBase}')) {
-            if (!this.preparedFile) throw new Error('*** {preparedBase} is missing');
-            opts = ops.replace('{preparedBase}', this.preparedFile);
+            if (!this.osmData.preparedFile) throw new Error('*** {preparedBase} is missing');
+            opts = ops.replace('{preparedBase}', this.osmData.preparedFile);
         }
 
         if (opts.match('{profile}')) {
@@ -26,6 +26,7 @@ module.exports = function () {
         }
 
         var cmd = util.format('%s%s%s/%s%s%s %s 2>error.log', this.QQ, this.LOAD_LIBRARIES, this.BIN_PATH, bin, this.EXE, this.QQ, opts);
+        console.log(cmd)
         exec(cmd, (err, stdout, stderr) => {
             this.stdout = stdout;
             this.stderr = fs.readFileSync('error.log');

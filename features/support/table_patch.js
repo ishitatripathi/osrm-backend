@@ -12,6 +12,6 @@ module.exports = function () {
 
         var error = new DifferentError(expected, actual);
 
-        callback(error.string);
+        return callback(error.string);
     }
 }

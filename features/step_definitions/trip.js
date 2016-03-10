@@ -4,7 +4,7 @@ module.exports = function () {
     this.When(/^I plan a trip I should get$/, (table) => {
         this.reprocess();
         var actual = [];
-        this.OSRMLoader.load(this, util.format('%s.osrm', this.preparedFile), () => {
+        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
             table.hashes().forEach((row, ri) => {
                 var got = {},
                     response;

@@ -18,6 +18,7 @@ var OSRMBaseLoader = class {
 
         var runLaunch = (cb) => {
             this.osrmUp(() => {
+                console.log('launched')
                 this.waitForConnection(cb);
             });
         };
@@ -40,7 +41,10 @@ var OSRMBaseLoader = class {
     }
 
     osrmDown (callback) {
+        // callback()
         if (this.pid) {
+            // TODO what is up w this
+            console.log('kill', this.pid)
             process.kill(this.pid, this.scope.TERMSIGNAL);
             this.waitForShutdown(callback);
             this.pid = null;
@@ -97,6 +101,7 @@ var OSRMDirectLoader = class extends OSRMBaseLoader {
         }
 
         var child = spawn(util.format('%s%s/osrm-routed', this.scope.LOAD_LIBRARIES, this.scope.BIN_PATH), [this.input_file, util.format('-p%d', this.scope.OSRM_PORT)], {detached: true});
+        console.log("PID:::::", child.pid)
         this.pid = child.pid;
         child.stdout.on('data', writeToLog);
         child.stderr.on('data', writeToLog);
@@ -114,10 +119,14 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
         this.inputFile = inputFile;
         var startDir = process.cwd();
         this.loadData(() => {
-            if (!this.pid) return this.launch(callback)});
+            console.log(arguments)
+            if (!this.pid) return this.launch(callback);
+            else callback();
+        });
     }
 
     loadData (callback) {
+        console.log('loading datastore');
         this.scope.runBin('osrm-datastore', this.inputFile, callback);
     }
 
@@ -129,6 +138,7 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
 
         var child = spawn(util.format('%s%s/osrm-routed', this.scope.LOAD_LIBRARIES, this.scope.BIN_PATH), ['--shared-memory=1', util.format('-p%d', this.scope.OSRM_PORT)], {detached: true});
         this.child = child;
+        console.log("PID:::::", child.pid)
         this.pid = child.pid;
         child.stdout.on('data', writeToLog);
         child.stderr.on('data', writeToLog);

@@ -27,7 +27,7 @@ class DB {
         this.relations = [];
     }
 
-    toXML () {
+    toXML (callback) {
         var xml = builder.create('osm', {'encoding':'UTF-8'});
         xml.att('generator', 'osrm-test')
             .att('version', '0.6');
@@ -93,7 +93,7 @@ class DB {
             }
         });
 
-        return xml.end({ pretty: true, indent: '  ' });
+        callback(xml.end({ pretty: true, indent: '  ' }));
     }
 }
 

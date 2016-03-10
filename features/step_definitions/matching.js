@@ -7,7 +7,7 @@ module.exports = function () {
             response,
             got;
 
-        this.OSRMLoader.load(this, util.format('%s.osrm', this.preparedFile), () => {
+        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
             table.hashes().forEach((row, ri) => {
                 if (row.request) {
                     got = {};

@@ -12,7 +12,7 @@ module.exports = function () {
                    throw new Error('*** routability table must contain either "forw", "backw" or "bothw" column');
                 }
 
-                this.OSRMLoader.load(util.format('%s.osrm', this.preparedFile), () => {
+                this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
                     var testRow = (row, i, cb) => {
                         var outputRow = row,
                             attempts = [];
@@ -45,7 +45,7 @@ module.exports = function () {
                             }
 
                             cb(null, outputRow);
-                        });
+                        }, row);
                     }
 
                     var q = d3.queue();
@@ -69,7 +69,7 @@ module.exports = function () {
         });
     });
 
-    var testRoutabilityRow = (i, cb) => {
+    var testRoutabilityRow = (i, cb, row) => {
         var result = {};
 
         var testDirection = (dir, callback) => {

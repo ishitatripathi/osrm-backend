@@ -17,17 +17,29 @@ module.exports = function () {
 
         this.nameWayHash = this.nameWayHash || {};
 
-        this.osmStr = new classes._osmStr(this.OSMDB);
+        this.osmData = new classes.osmData(this);
 
-        this._fingerprintOSM = '';
+        // this.osmStr = new classes._osmStr(this.OSMDB);
 
-        this._osmHash = '';
+        // this._fingerprintOSM = '';
 
-        this.osmFile = this.osmFile || path.resolve(this.DATA_FOLDER, this.fingerprintOSM());
+        // this._osmHash = '';
 
-        this.extractedFile = this.extractedFile || path.resolve([this.osmFile, this.fingerprintExtract].join('_'));
+        // this.osmFile = this.osmFile || path.resolve(this.DATA_FOLDER, this.fingerprintOSM());
 
-        this.preparedFile = this.preparedFile || path.resolve([this.osmFile, this.fingerprintExtract, this.fingerprintPrepare].join('_'));
+        // this.extractedFile = this.extractedFile || path.resolve([this.osmFile, this.fingerprintExtract].join('_'));
+
+        // this.preparedFile = this.preparedFile || path.resolve([this.osmFile, this.fingerprintExtract, this.fingerprintPrepare].join('_'));
+
+        if (!this.luaLibHash) {
+            fs.readdir(path.normalize(this.PROFILES_PATH, '/lib/'), (err, files) => {
+                if (err) throw err;
+                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.resolve(this.PROFILES_PATH, '/lib/', f));
+                this.luaLibHash = this.hashOfFiles(luaFiles);
+            });
+        }
+
+        this.profileHash = this.hashProfile();
 
         this.binExtractHash = this.binExtractHash || this.hashOfFiles(util.format('%s/osrm-extract%s', this.BIN_PATH, this.EXE));
 
@@ -54,14 +66,6 @@ module.exports = function () {
         this.DESTINATION_REACHED = 15;              // OSRM instruction code
 
         this.shortcutsHash = this.shortcutsHash || {};
-
-        if (!this.luaLibHash) {
-            fs.readdir(path.normalize(this.PROFILES_PATH, '/lib/'), (err, files) => {
-                if (err) throw err;
-                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.resolve(this.PROFILES_PATH, '/lib/', f));
-                this.luaLibHash = this.hashOfFiles(luaFiles);
-            })
-        }
 
         callback();
     }

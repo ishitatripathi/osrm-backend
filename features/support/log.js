@@ -1,4 +1,4 @@
-var fs = require('fs');
+    var fs = require('fs');
 
 module.exports = function () {
     this.clearLogFiles = () => {
@@ -22,14 +22,14 @@ module.exports = function () {
         log('=========================================');
         log('Failed scenario: ' + this.scenarioTitle);
         log('Time: ' + this.scenarioTime);
-        log('Fingerprint osm stage: ' + this.fingerprintOSM);
+        log('Fingerprint osm stage: ' + this.osmData.fingerprintOSM);
         log('Fingerprint extract stage: ' + this.fingerprintExtract);
         log('Fingerprint prepare stage: ' + this.fingerprintPrepare);
         log('Fingerprint route stage: ' + this.fingerprintRoute);
         log('Profile: ' + this.profile);
         log();
         log('```xml');               // so output can be posted directly to github comment fields
-        log(this.osmStr.xml.trim());
+        log(this.osmData.str.trim());
         log('```');
         log();
         log();
@@ -38,8 +38,8 @@ module.exports = function () {
     }
 
     this.logFail = (expected, got, attempts) => {
-        // return;          // TODO wtf??
-        logScenarioFailInfo();
+        return;          // TODO wtf??
+        this.logScenarioFailInfo();
         log('== ')
         log('Expected: ', expected);
         log('Got:      ', got);
@@ -63,7 +63,7 @@ module.exports = function () {
         log('', 'preprocess');
         log('== OSM data:', 'preprocess');
         log('```xml', 'preprocess');            // so output can be posted directly to github comment fields
-        log(this.osmStr.xml, 'preprocess');
+        log(this.osmData.str, 'preprocess');
         log('```', 'preprocess');
         log('', 'preprocess');
         log('== Profile:', 'preprocess');

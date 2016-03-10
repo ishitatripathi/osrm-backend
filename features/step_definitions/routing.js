@@ -1,23 +1,137 @@
 var util = require('util');
+var d3 = require('d3-queue');
 
 module.exports = function () {
-    this.When(/^I route I should get$/, (table) => {
+    this.When(/^I route I should get$/, (table, callback) => {
         this.reprocess();
         var actual = [];
 
-        this.OSRMLoader.load(this, util.format('%s.osrm', this.preparedFile), () => {
-            table.hashes().forEach((row, ri) => {
+        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+            var headers = new Set(table.raw()[0]);
+
+            var requestRow = (row, ri, cb) => {
                 var got,
-                    response,
                     json;
+
+                var afterRequest = (err, res, body) => {
+                    var instructions, bearings, compasses, turns, modes, times, distances;
+
+                    if (body && body.length) {
+                        json = JSON.parse(body);
+
+                        if (json.status === 200) {
+                            instructions = this.wayList(json.route_instructions);
+                            bearings = this.bearingList(json.route_instructions);
+                            compasses = this.compassList(json.route_instructions);
+                            turns = this.turnList(json.route_instructions);
+                            modes = this.modeList(json.route_instructions);
+                            times = this.timeList(json.route_instructions);
+                            distances = this.distanceList(json.route_instructions);
+                        }
+                    }
+
+                    console.log(instructions, bearings, compasses, turns, modes, times, distances)
+
+                    if (headers.has('status')) {
+                        got.status = json.status.toString();
+                    }
+
+                    if (headers.has('message')) {
+                        got.message = json.status_message;
+                    }
+
+                    if (headers.has('#')) {
+                        // comment column
+                        got['#'] = row['#'];
+                    }
+
+                    // TODO this feels like has been repeated from elsewhere.....
+
+                    if (headers.has('start')) {
+                        got.start = instructions ? json.route_summary.start_point : null;
+                    }
+
+                    if (headers.has('end')) {
+                        got.end = instructions ? json.route_summary.end_point : null;
+                    }
+
+                    if (headers.has('geometry')) {
+                        got.geometry = json.route_geometry;
+                    }
+
+                    if (headers.has('route')) {
+                        got.route = (instructions || '').trim();
+
+                        if (headers.has('alternative')) {
+                            got.alternative = json.found_alternative ?
+                                wayList(json.alternative_instructions[0]) : '';
+                        }
+
+                        var distance = json.route_summary.total_distance,
+                            time = json.route_summary.total_time;
+
+                        if (headers.has('distance')) {
+                            if (row.distance.length) {
+                                if (!row.distance.match(/\d+m/))
+                                    throw new Error('*** Distance must be specified in meters. (ex: 250m)');
+                                got.distance = instructions ? util.format('%dm', distance) : '';
+                            }
+                        }
+
+                        if (headers.has('time')) {
+                            if (!row.time.match(/\d+s/))
+                                throw new Error('*** Time must be specied in seconds. (ex: 60s)');
+                            got.time = instructions ? util.format('%ds', time) : '';
+                        }
+
+                        if (headers.has('speed')) {
+                            if (row.speed !== '' && instructions) {
+                                if (!row.speed.match(/\d+ km\/h/))
+                                    throw new Error('*** Speed must be specied in km/h. (ex: 50 km/h)');
+                                var speed = time > 0 ? Math.round(3.6*distance/time) : null;
+                                got.speed = util.format('%d km/h', speed);
+                            } else {
+                                got.speed = '';
+                            }
+                        }
+
+                        function putValue(key, value) {
+                            if (headers.has(key)) got[key] = instructions ? value : '';
+                        }
+
+                        putValue('bearing', bearings);
+                        putValue('compass', compasses);
+                        putValue('turns', turns);
+                        putValue('modes', modes);
+                        putValue('times', times);
+                        putValue('distances', distances);
+                    }
+
+                    ok = true;
+
+                    for (var key in row) {
+                        if (this.FuzzyMatch.match(got[key], row[key])) {
+                            got[key] = row[key];
+                        } else {
+                            ok = false;
+                        }
+                    }
+
+                    if (!ok) {
+                        this.logFail(row, got, { route: { query: this.query, response: res }});
+                    }
+
+                    cb(null, got);
+                }
+
                 if (row.request) {
                     got = { request: row.request };
-                    response = requestUrl(row.request);
+                    requestUrl(row.request, afterRequest);
                 } else {
                     var defaultParams = this.queryParams;
                     var userParams = [];
                     got = {};
-                    for (var key in row) {
+                    for (var k in row) {
                         var match = k.match(/param:(.*)/);
                         if (match) {
                             if (row[k] === '(nil)') {
@@ -49,7 +163,7 @@ module.exports = function () {
 
                         got.from = row.from;
                         got.to = row.to;
-                        response = this.requestRoute(waypoints, bearings, params);
+                        this.requestRoute(waypoints, bearings, params, afterRequest);
                     } else if (row.waypoints) {
                         row.waypoints.split(',').forEach((n) => {
                             // TODO again this might need to be trimmed *before* split
@@ -58,123 +172,21 @@ module.exports = function () {
                             waypoints.push(node);
                         });
                         got.waypoints = row.waypoints;
-                        response = requestRoute(waypoints, bearings, params);
+                        this.requestRoute(waypoints, bearings, params, afterRequest);
                     } else {
                         throw new Error('*** no waypoints');
                     }
                 }
+            };
 
-                var instructions, bearings, compasses, turns, modes, times, distances;
-
-                if (response.body.length) {
-                    json = JSON.parse(response.body);
-
-                    if (json.status === 200) {
-                        instructions = wayList(json.route_instructions);
-                        bearings = bearingList(json.route_instructions);
-                        compasses = compassList(json.route_instructions);
-                        turns = turnList(json.route_instructions);
-                        modes = modeList(json.route_instructions);
-                        times = timeList(json.route_instructions);
-                        distances = distanceList(json.route_instructions);
-                    }
-                }
-
-                if (table.headers.status) {
-                    got.status = json.status.toString();
-                }
-
-                if (table.headers.message) {
-                    got.message = json.status_message;
-                }
-
-                if (table.headers['#']) {
-                    // comment column
-                    got['#'] = row['#'];
-                }
-
-                // TODO this feels like has been repeated from elsewhere.....
-
-                if (table.headers.start) {
-                    got.start = instructions ? json.route_summary.start_point : null;
-                }
-
-                if (table.headers.end) {
-                    got.end = instructions ? json.route_summary.end_point : null;
-                }
-
-                if (table.headers.geometry) {
-                    got.geometry = json.route_geometry;
-                }
-
-                if (table.headers.route) {
-                    got.route = (instructions || '').trim();
-
-                    if (table.headers.alternative) {
-                        got.alternative = json.found_alternative ?
-                            wayList(json.alternative_instructions[0]) : '';
-                    }
-
-                    var distance = json.route_summary.total_distance,
-                        time = json.route_summary.total_time;
-
-                    if (table.headers.distance) {
-                        if (row.distance.length) {
-                            if (!row.distance.match(/\d+m/))
-                                throw new Error('*** Distance must be specified in meters. (ex: 250m)');
-                            got.distance = instructions ? util.format('%dm', distance) : '';
-                        }
-                    }
-
-                    if (table.headers.time) {
-                        if (!row.time.match(/\d+s/))
-                            throw new Error('*** Time must be specied in seconds. (ex: 60s)');
-                        got.time = instructions ? util.format('%ds', time) : '';
-                    }
-
-                    if (table.headers.speed) {
-                        if (row.speed !== '' && instructions) {
-                            if (!row.speed.match(/\d+ km\/h/))
-                                throw new Error('*** Speed must be specied in km/h. (ex: 50 km/h)');
-                            var speed = time > 0 ? Math.round(3.6*distance/time) : null;
-                            got.speed = util.format('%d km/h', speed);
-                        } else {
-                            got.speed = '';
-                        }
-                    }
-
-                    function putValue(key, value) {
-                        if (table.headers[key]) got[key] = instructions ? value : '';
-                    }
-
-                    putValue('bearing', bearings);
-                    putValue('compass', compasses);
-                    putValue('turns', turns);
-                    putValue('modes', modes);
-                    putValue('times', times);
-                    putValue('distances', distances);
-                }
-
-                ok = true;
-
-                for (var key in row) {
-                    if (this.FuzzyMatch.match(got[key], row[key])) {
-                        got[key] = row[key];
-                    } else {
-                        ok = false;
-                    }
-                }
-
-                if (!ok) {
-                    this.logFail(row, got, { route: { query: this.query, response: response }});
-                }
-
-                actual.push(got);
+            var q = d3.queue();
+            table.hashes().forEach((row, ri) => { q.defer(requestRow, row, ri); });
+            q.awaitAll((err, gotArray) => {
+                console.log(table.hashes(), gotArray)
+                this.diffTables(table, gotArray, {}, callback);
             });
         });
 
-        // TODO again
-        return table.diff(actual);
     });
 
     this.When(/^I route (\d+) times I should get$/, (n, table) => {

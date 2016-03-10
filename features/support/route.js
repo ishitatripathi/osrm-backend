@@ -138,6 +138,7 @@ module.exports = function () {
     }
 
     this.wayList = (instructions) => {
+        console.log(instructions)
         return this.extractInstructionList(instructions, 1);
     }
 

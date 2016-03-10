@@ -33,7 +33,7 @@ module.exports = function () {
         this.reprocess();
         var actual = [];
         actual.push(table.headers);
-        this.OSRMLoader.load(this, util.format('%s.osrm', this.preparedFile), () => {
+        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
             // compute matrix
             var params = this.queryParams,
                 response = this.requestTable(waypoints, params);

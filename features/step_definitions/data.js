@@ -1,13 +1,15 @@
 var util = require('util');
 var path = require('path');
 var fs = require('fs');
+var d3 = require('d3-queue');
 var OSM = require('../support/build_osm');
 
 module.exports = function () {
     var DB = OSM.DB;
 
-    this.Given(/^the profile "([^"]*)"$/, (profile) => {
+    this.Given(/^the profile "([^"]*)"$/, (profile, callback) => {
         this.setProfile(profile);
+        callback();
     });
 
     // this.Given(/^the import format "(.*?)"$/, (format, callback) => {
@@ -15,53 +17,71 @@ module.exports = function () {
     //     callback();
     // });
 
-    this.Given(/^the extract extra arguments "(.*?)"$/, (args) => {
+    this.Given(/^the extract extra arguments "(.*?)"$/, (args, callback) => {
         this.setExtractArgs(args);
+        callback();
     });
 
-    this.Given(/^a grid size of (\d+) meters$/, (meters) => {
+    this.Given(/^a grid size of (\d+) meters$/, (meters, callback) => {
         this.setGridSize(meters);
+        callback();
     });
 
-    this.Given(/^the origin ([-+]?[0-9]*\.?[0-9]+),([-+]?[0-9]*\.?[0-9]+)$/, (lat, lon) => {
+    this.Given(/^the origin ([-+]?[0-9]*\.?[0-9]+),([-+]?[0-9]*\.?[0-9]+)$/, (lat, lon, callback) => {
         this.setOrigin([parseFloat(lon), parseFloat(lat)]);
+        callback();
     });
 
-    this.Given(/^the shortcuts$/, (table) => {
-        table.hashes().forEach((row) => {
-          // TODO what is shortcutsHash
-          // Given /^the shortcuts$/ do |table|
-          //   table.hashes.each do |row|
-          //     shortcuts_hash[ row['key'] ] = row['value']
-          //   end
-          // end
+    this.Given(/^the shortcuts$/, (table, callback) => {
+        var q = d3.queue();
+
+        var addShortcut = (row, cb) => {
             shortcutsHash[row.key] = row.value;
+            cb();
+        }
+
+        table.hashes().forEach((row) => {
+            q.defer(addShortcut, row);
         });
+
+        q.awaitAll(callback);
     });
 
-    this.Given(/^the node map$/, (table) => {
-        table.raw.forEach((row, ri) => {
-            row.forEach((name, ci) => {
-                if (name) {
-                    if (name.length !== 1) throw new Error(util.format('*** node invalid name %s, must be single characters', name));
-                    if (!name.match(/[a-z0-9]/)) throw new Error(util.format('*** invalid node name %s, must me alphanumeric', name));
+    this.Given(/^the node map$/, (table, callback) => {
+        var q = d3.queue();
 
-                    if (name.match(/[a-z]/)) {
-                        if (nameNodeHash[name]) throw new Error(util.format('*** duplicate node %s', name));
-                        var lonLat = this.tableCoordToLonLat(ci, ri);
-                        this.addOSMNode(name, lonLat[0], lonLat[1], null);
-                    } else {
-                        if (locationHash[name]) throw new Error(util.format('*** duplicate node %s'), name);
-                        var lonLat = this.tableCoordToLonLat(ci, ri);
-                        this.addLocation(name, lonLat[0], lonLat[1], null);
-                    }
+        var addNode = (name, ri, ci, cb) => {
+            if (name) {
+                if (name.length !== 1) throw new Error(util.format('*** node invalid name %s, must be single characters', name));
+                if (!name.match(/[a-z0-9]/)) throw new Error(util.format('*** invalid node name %s, must me alphanumeric', name));
+
+                if (name.match(/[a-z]/)) {
+                    if (this.nameNodeHash[name]) throw new Error(util.format('*** duplicate node %s', name));
+                    var lonLat = this.tableCoordToLonLat(ci, ri);
+                    this.addOSMNode(name, lonLat[0], lonLat[1], null);
+                } else {
+                    if (this.locationHash[name]) throw new Error(util.format('*** duplicate node %s'), name);
+                    var lonLat = this.tableCoordToLonLat(ci, ri);
+                    this.addLocation(name, lonLat[0], lonLat[1], null);
                 }
+
+                cb();
+            }
+        }
+
+        table.raw().forEach((row, ri) => {
+            row.forEach((name, ci) => {
+                q.defer(addNode, name, ri, ci);
             });
         });
+
+        q.awaitAll(callback);
     });
 
-    this.Given(/^the node locations$/, (table) => {
-        table.hashes().forEach((row) => {
+    this.Given(/^the node locations$/, (table, callback) => {
+        var q = d3.queue();
+
+        var addNodeLocations = (row, cb) => {
             var name = row.node;
             if (this.findNodeByName(name)) throw new Error(util.format('*** duplicate node %s'), name);
 
@@ -71,16 +91,28 @@ module.exports = function () {
             } else {
                 this.addLocation(name, parseFloat(row.lon), parseFloat(row.lat));
             }
-        });
+
+            cb();
+        }
+
+        table.hashes().forEach((row) => q.defer(addNodeLocations, row));
+
+        q.awaitAll(callback);
     });
 
-    this.Given(/^the nodes$/, (table) => {
-        table.hashes().forEach((row) => {
+    this.Given(/^the nodes$/, (table, callback) => {
+        var q = d3.queue();
+
+        var addNode = (row, cb) => {
+            // TODO not convinced by this ^
             var name = row.node,
             node = this.findNodeByName(name);
             if (!node) throw new Error(util.format('*** unknown node %s'), name);
             node.push(row);
-            // TODO not convinced by this ^
+            cb();
+        }
+
+        table.hashes().forEach((row) => q.defer(addNode, row));
             // Given /^the nodes$/ do |table|
             //   table.hashes.each do |row|
             //     name = row.delete 'node'
@@ -89,14 +121,17 @@ module.exports = function () {
             //     node << row
             //   end
             // end
-        });
+
+        q.awaitAll(callback);
     });
 
-    this.Given(/^the ways$/, (table) => {
+    this.Given(/^the ways$/, (table, callback) => {
         if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenaria?');
 
-        table.hashes().forEach((row) => {
-            var way = new OSM.Way(this.makeOSMId, OSM_USER, OSM_TIMESTAMP, OSM_UID);
+        var q = d3.queue();
+
+        var addWay = (row, cb) => {
+            var way = new OSM.Way(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
 
             var nodes = row.nodes;
             if (this.nameWayHash.nodes) throw new Error(util.format('*** duplicate way %s', nodes));
@@ -129,16 +164,23 @@ module.exports = function () {
                 tags.name = row.name;
 
             way.setTags(tags);
-            DB.addWay(way);
+            this.OSMDB.addWay(way);
             this.nameWayHash[nodes] = way;
-        });
+            cb();
+        }
+
+        table.hashes().forEach((row) => q.defer(addWay, row));
+
+        q.awaitAll(callback);
     });
 
     this.Given(/^the relations$/, (table) => {
         if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenaria?');
 
-        table.hashes().forEach((row) => {
-            var relation = new OSM.Relation(this.makeOSMId, OSM_USER, OSM_TIMESTAMP);
+        var q = d3.queue();
+
+        var addRelation = (row, cb) => {
+            var relation = new OSM.Relation(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP);
 
             for (var key in row) {
                 var isNode = key.match(/^node:(.*)/),
@@ -163,48 +205,55 @@ module.exports = function () {
                     relation.addTag(key, row[key]);
                 }
             }
-            relation.uid = OSM_UID;
+            relation.uid = this.OSM_UID;
             DB.addRelation(relation);
-        });
+
+            cb();
+        };
+
+        table.hashes().forEach((row) => q.defer(addRelation, row));
+
+        q.awaitAll(callback);
     });
 
-    this.Given(/^the input file ([^"]*)$/, (file) => {
+    this.Given(/^the input file ([^"]*)$/, (file, callback) => {
         if (path.extname(file) !== '.osm') throw new Error('*** Input file must be in .osm format');
         this.osm_str = fs.readFileSync(file, 'utf8');
+        callback();
     });
 
-    this.Given(/^the raster source$/, (data) => {
-        fs.writeFileSync(path.resolve(this.TEST_FOLDER, 'rastersource.asc'), data);
+    this.Given(/^the raster source$/, (data, callback) => {
+        fs.writeFile(path.resolve(this.TEST_FOLDER, 'rastersource.asc'), data, callback);
     });
 
-    this.Given(/^the data has been saved to disk$/, () => {
+    this.Given(/^the data has been saved to disk$/, (callback) => {
+        try {
+            this.writeInputData(callback);
+        } catch(e) {
+            this.processError = e;
+        }
+    });
+
+    this.Given(/^the data has been extracted$/, (callback) => {
         try {
             this.writeInputData();
+            if (!this.extracted) this.extractData(callback);
         } catch(e) {
             this.processError = e;
         }
     });
 
-    this.Given(/^the data has been extracted$/, () => {
+    this.Given(/^the data has been prepared$/, (callback) => {
         try {
-            this.writeInputData();
-            if (!this.extracted) this.extractData();
+            this.reprocess(callback);
         } catch(e) {
             this.processError = e;
         }
     });
 
-    this.Given(/^the data has been prepared$/, () => {
+    this.Given(/^osrm\-routed is stopped$/, (callback) => {
         try {
-            this.reprocess();
-        } catch(e) {
-            this.processError = e;
-        }
-    });
-
-    this.Given(/^osrm\-routed is stopped$/, () => {
-        try {
-            this.OSRMLoader.shutdown();
+            this.OSRMLoader.shutdown(callback);
         } catch(e) {
             this.processError = e;
         }
