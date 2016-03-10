@@ -36,7 +36,7 @@ module.exports = function () {
         var q = d3.queue();
 
         var addShortcut = (row, cb) => {
-            shortcutsHash[row.key] = row.value;
+            this.shortcutsHash[row.key] = row.value;
             cb();
         }
 
@@ -67,6 +67,7 @@ module.exports = function () {
 
                 cb();
             }
+            else cb();
         }
 
         table.raw().forEach((row, ri) => {
@@ -174,27 +175,27 @@ module.exports = function () {
         q.awaitAll(callback);
     });
 
-    this.Given(/^the relations$/, (table) => {
+    this.Given(/^the relations$/, (table, callback) => {
         if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenaria?');
 
         var q = d3.queue();
 
         var addRelation = (row, cb) => {
-            var relation = new OSM.Relation(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP);
+            var relation = new OSM.Relation(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
 
             for (var key in row) {
                 var isNode = key.match(/^node:(.*)/),
                     isWay = key.match(/^way:(.*)/),
                     isColonSeparated = key.match(/^(.*):(.*)/);
                 if (isNode) {
-                    row[key].split(',').map(function(v) { return v.trim(); }).forEach(function(nodeName) {
+                    row[key].split(',').map(function(v) { return v.trim(); }).forEach((nodeName) => {
                         if (nodeName.length !== 1) throw new Error(util.format('*** invalid relation node member "%s"'), nodeName);
                         var node = this.findNodeByName(nodeName);
                         if (!node) throw new Error(util.format('*** unknown relation node member "%s"'), nodeName);
                         relation.addMember('node', node.id, isNode[1]);
                     });
                 } else if (isWay) {
-                    row[key].split(',').map(function(v) { return v.trim(); }).forEach(function(wayName) {
+                    row[key].split(',').map(function(v) { return v.trim(); }).forEach((wayName) => {
                         var way = this.findWayByName(wayName);
                         if (!way) throw new Error(util.format('*** unknown relation way member "%s"'), wayName);
                         relation.addMember('way', way.id, isWay[1]);
@@ -206,7 +207,7 @@ module.exports = function () {
                 }
             }
             relation.uid = this.OSM_UID;
-            DB.addRelation(relation);
+            this.OSMDB.addRelation(relation);
 
             cb();
         };

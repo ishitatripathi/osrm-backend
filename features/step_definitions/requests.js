@@ -1,10 +1,9 @@
 var assert = require('assert');
 
 module.exports = function () {
-    this.When(/^I request \/(.*)$/, (path) => {
-        this.reprocess();
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
-            this.response = this.requestPath(path, []);
+    this.When(/^I request \/(.*)$/, (path, callback) => {
+        this.reprocessAndLoadData(() => {
+            this.response = this.requestPath(path, [], callback);
         });
     });
 
@@ -14,22 +13,37 @@ module.exports = function () {
         assert.ok(this.response.body.length);
     });
 
-    this.Then(/^response should be valid JSON$/, () => {
-        this.json = JSON.parse(this.response.body);
+    this.Then(/^response should be valid JSON$/, (callback) => {
+        try {
+            this.json = JSON.parse(this.response.body);
+            callback();
+        } catch (e) {
+            callback(e);
+        }
     });
 
     this.Then(/^response should be well-formed$/, () => {
         assert.equal(typeof this.json.status, 'number');
     });
 
-    this.Then(/^status code should be (\d+)$/, (code) => {
-        this.json = JSON.parse(this.response.body);
-        assert.equal(this.json.status, parseInt(code));
+    this.Then(/^status code should be (\d+)$/, (code, callback) => {
+        try {
+            this.json = JSON.parse(this.response.body);
+            assert.equal(this.json.status, parseInt(code));
+            callback();
+        } catch(e) {
+            callback(e);
+        }
     });
 
-    this.Then(/^status message should be "(.*?)"$/, (message) => {
-        this.json = JSON.parse(this.response.body);
-        assert(this.json.status_message, message);
+    this.Then(/^status message should be "(.*?)"$/, (message, callback) => {
+        try {
+            this.json = JSON.parse(this.response.body);
+            assert(this.json.status_message, message);
+            callback();
+        } catch(e) {
+            callback(e);
+        }
     });
 
     this.Then(/^response should be a well-formed route$/, () => {

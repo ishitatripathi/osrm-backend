@@ -3,10 +3,8 @@ var d3 = require('d3-queue');
 
 module.exports = function () {
     this.When(/^I route I should get$/, (table, callback) => {
-        this.reprocess();
         var actual = [];
-
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+        this.reprocessAndLoadData(() => {
             var headers = new Set(table.raw()[0]);
 
             var requestRow = (row, ri, cb) => {
@@ -29,8 +27,6 @@ module.exports = function () {
                             distances = this.distanceList(json.route_instructions);
                         }
                     }
-
-                    console.log(instructions, bearings, compasses, turns, modes, times, distances)
 
                     if (headers.has('status')) {
                         got.status = json.status.toString();
@@ -182,11 +178,9 @@ module.exports = function () {
             var q = d3.queue();
             table.hashes().forEach((row, ri) => { q.defer(requestRow, row, ri); });
             q.awaitAll((err, gotArray) => {
-                console.log(table.hashes(), gotArray)
                 this.diffTables(table, gotArray, {}, callback);
             });
         });
-
     });
 
     this.When(/^I route (\d+) times I should get$/, (n, table) => {

@@ -89,7 +89,7 @@ class DB {
 
             for (var k in r.tags) {
                 relation.ele('tag')
-                    .att(k, w.tags[k]);
+                    .att(k, r.tags[k]);
             }
         });
 

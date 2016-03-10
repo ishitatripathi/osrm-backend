@@ -2,12 +2,11 @@ var util = require('util');
 
 module.exports = function () {
     this.When(/^I match I should get$/, (table) => {
-        this.reprocess();
         var actual = [],
             response,
             got;
 
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+        this.reprocessAndLoadData(() => {
             table.hashes().forEach((row, ri) => {
                 if (row.request) {
                     got = {};

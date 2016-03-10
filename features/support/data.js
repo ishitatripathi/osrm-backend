@@ -120,7 +120,7 @@ module.exports = function () {
     }
 
     this.findWayByName = (s) => {
-        return this.nameWayHash[s.toString()] || this.nameWayHash[s.toString().reverse()];
+        return this.nameWayHash[s.toString()] || this.nameWayHash[s.toString().split('').reverse().join('')];
     }
 
     this.resetData = () => {
@@ -189,32 +189,37 @@ module.exports = function () {
     }
 
     this.extractData = (callback) => {
-        console.log('extract');
         this.logPreprocessInfo();
         this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
         // TODO replace with lib?? or just w runBin cmd
         exec(util.format('%s%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
             this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
-            console.log("HI", err, stdout, stderr)
             if (err) {
-                console.log("EXTRACT ERROR")
                 this.log(util.format('*** Exited with code %d', err.code), 'preprocess');
                 return callback(this.ExtractError(err.code, util.format('osrm-extract exited with code %d', err.code)));
             }
 
-            ['osrm','osrm.names','osrm.restrictions','osrm.ebg','osrm.enw','osrm.edges','osrm.fileIndex','osrm.geometry','osrm.nodes','osrm.ramIndex'].forEach((file) => {
+            var q = d3.queue();
+
+            var rename = (file, cb) => {
                 this.log(util.format('Renaming %s.%s to %s.%s', this.osmData.osmFile, file, this.osmData.extractedFile, file), 'preprocess');
                 fs.rename([this.osmData.osmFile, file].join('.'), [this.osmData.extractedFile, file].join('.'), (err) => {
-                    if (err) return callback(this.FileError(null, 'failed to rename data file after extracting'));
+                    if (err) return cb(this.FileError(null, 'failed to rename data file after extracting'));
+                    cb();
                 });
+            }
+
+            ['osrm','osrm.names','osrm.restrictions','osrm.ebg','osrm.enw','osrm.edges','osrm.fileIndex','osrm.geometry','osrm.nodes','osrm.ramIndex'].forEach((file) => {
+                q.defer(rename, file);
             });
-            console.log('extracted')
-            callback();
+
+            q.awaitAll((err) => {
+                callback(err);
+            });
         });
     }
 
     this.prepareData = (callback) => {
-        console.log('prepare')
         this.logPreprocessInfo();
         this.log(util.format('== Preparing %s.osm...', this.osmData.extractedFile), 'preprocess');
         exec(util.format('%s%s/osrm-prepare %s.osrm  --profile %s/%s.lua >>%s 2>&1',
@@ -255,7 +260,6 @@ module.exports = function () {
 
             q.awaitAll((err) => {
                 this.log('', 'preprocess');
-                console.log('prepared')
                 callback(err);
             });
         });
@@ -269,9 +273,7 @@ module.exports = function () {
 
         this.osmData.populate(() => {
             this.writeInputData(() => {
-                console.log('_extract')
                 _extract(() => {
-                    console.log('_prepare')
                     _prepare(() => {
                         this.logPreprocessDone();
                         callback();
@@ -280,5 +282,11 @@ module.exports = function () {
             });
         });
 
+    }
+
+    this.reprocessAndLoadData = (callback) => {
+        this.reprocess(() => {
+            this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), callback);
+        });
     }
 }

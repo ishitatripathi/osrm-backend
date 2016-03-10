@@ -5,65 +5,63 @@ var classes = require('../support/data_classes');
 module.exports = function () {
     this.Then(/^routability should be$/, (table, callback) => {
         this.buildWaysFromTable(table, () => {
-            this.reprocess(() => {
-                var directions = ['forw','backw','bothw'];
+            var directions = ['forw','backw','bothw'];
 
-                if (!directions.some(k => !!table.hashes()[0].hasOwnProperty(k))) {
-                   throw new Error('*** routability table must contain either "forw", "backw" or "bothw" column');
-                }
+            if (!directions.some(k => !!table.hashes()[0].hasOwnProperty(k))) {
+               throw new Error('*** routability table must contain either "forw", "backw" or "bothw" column');
+            }
 
-                this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
-                    var testRow = (row, i, cb) => {
-                        var outputRow = row,
-                            attempts = [];
+            this.reprocessAndLoadData(() => {
+                var testRow = (row, i, cb) => {
+                    var outputRow = row,
+                        attempts = [];
 
-                        testRoutabilityRow(i, (result) => {
-                            directions.filter(d => !!table.hashes()[0][d]).forEach((direction) => {
-                                var want = this.shortcutsHash[row[direction]] || row[direction];
+                    testRoutabilityRow(i, (result) => {
+                        directions.filter(d => !!table.hashes()[0][d]).forEach((direction) => {
+                            var want = this.shortcutsHash[row[direction]] || row[direction];
 
-                                switch (true) {
-                                    case '' === want:
-                                    case 'x' === want:
-                                        outputRow[direction] = result[direction].status ?
-                                            result[direction].status.toString() : '';
-                                        break;
-                                    case /^\d+s/.test(want):
-                                        break;
-                                    case /^\d+ km\/h/.test(want):
-                                        break;
-                                    default:
-                                        throw new Error(util.format('*** Unknown expectation format: %s', want));
-                                }
-
-                                if (this.FuzzyMatch.match(outputRow[direction], want)) {
-                                    outputRow[direction] = row[direction];
-                                }
-                            });
-
-                            if (outputRow != row) {  // TODO i'm not sure this inequality is going to work?
-                                this.logFail(row, outputRow, result);
+                            switch (true) {
+                                case '' === want:
+                                case 'x' === want:
+                                    outputRow[direction] = result[direction].status ?
+                                        result[direction].status.toString() : '';
+                                    break;
+                                case /^\d+s/.test(want):
+                                    break;
+                                case /^\d+ km\/h/.test(want):
+                                    break;
+                                default:
+                                    throw new Error(util.format('*** Unknown expectation format: %s', want));
                             }
 
-                            cb(null, outputRow);
-                        }, row);
-                    }
+                            if (this.FuzzyMatch.match(outputRow[direction], want)) {
+                                outputRow[direction] = row[direction];
+                            }
+                        });
 
-                    var q = d3.queue();
+                        if (outputRow != row) {  // TODO i'm not sure this inequality is going to work?
+                            this.logFail(row, outputRow, result);
+                        }
 
-                    table.hashes().forEach((row, i) => {
-                        // TODO does this preserve order???
-                        q.defer(testRow, row, i);
-                    });
+                        cb(null, outputRow);
+                    }, row);
+                }
 
-                    q.awaitAll((err, actual) => {
-                        if (err) return callback(err);
-                        this.diffTables(table, actual, {}, callback);
-                        // callback(new Error('wrong'))
+                var q = d3.queue();
 
-                        // TODO again
-                        // return table.diff(actual);
-                        // return true;
-                    });
+                table.hashes().forEach((row, i) => {
+                    // TODO does this preserve order???
+                    q.defer(testRow, row, i);
+                });
+
+                q.awaitAll((err, actual) => {
+                    if (err) return callback(err);
+                    this.diffTables(table, actual, {}, callback);
+                    // callback(new Error('wrong'))
+
+                    // TODO again
+                    // return table.diff(actual);
+                    // return true;
                 });
             });
         });

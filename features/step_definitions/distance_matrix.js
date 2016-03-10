@@ -30,10 +30,10 @@ module.exports = function () {
             });
         }
 
-        this.reprocess();
         var actual = [];
         actual.push(table.headers);
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+
+        this.reprocessAndLoadData(() => {
             // compute matrix
             var params = this.queryParams,
                 response = this.requestTable(waypoints, params);

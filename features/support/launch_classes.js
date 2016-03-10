@@ -18,7 +18,6 @@ var OSRMBaseLoader = class {
 
         var runLaunch = (cb) => {
             this.osrmUp(() => {
-                console.log('launched')
                 this.waitForConnection(cb);
             });
         };
@@ -119,14 +118,12 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
         this.inputFile = inputFile;
         var startDir = process.cwd();
         this.loadData(() => {
-            console.log(arguments)
             if (!this.pid) return this.launch(callback);
             else callback();
         });
     }
 
     loadData (callback) {
-        console.log('loading datastore');
         this.scope.runBin('osrm-datastore', this.inputFile, callback);
     }
 

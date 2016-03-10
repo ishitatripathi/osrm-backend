@@ -2,10 +2,9 @@ var util = require('util');
 
 module.exports = function () {
     this.When(/^I request nearest I should get$/, (table) => {
-        this.reprocess();
         var actual = [];
 
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+        this.reprocessAndLoadData(() => {
             table.hashes().forEach((row, ri) => {
                 var inNode = this.findNodeByName(row.in);
                 if (!inNode) throw new Error(util.format('*** unknown in-node "%s"'), row.in);

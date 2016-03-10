@@ -138,7 +138,6 @@ module.exports = function () {
     }
 
     this.wayList = (instructions) => {
-        console.log(instructions)
         return this.extractInstructionList(instructions, 1);
     }
 
@@ -173,7 +172,7 @@ module.exports = function () {
         }
 
         // replace instructions codes with strings, e.g. '11-3' gets converted to 'enter_roundabout-3'
-        return instructions.map(r => r.toString().replace(/^(\d*)/, (match, num) => types[num])).join(',');
+        return instructions.map(r => r[0].toString().replace(/^(\d*)/, (match, num) => types[num])).join(',');
     }
 
     this.modeList = (instructions) => {

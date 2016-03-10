@@ -26,7 +26,6 @@ module.exports = function () {
         }
 
         var cmd = util.format('%s%s%s/%s%s%s %s 2>error.log', this.QQ, this.LOAD_LIBRARIES, this.BIN_PATH, bin, this.EXE, this.QQ, opts);
-        console.log(cmd)
         exec(cmd, (err, stdout, stderr) => {
             this.stdout = stdout;
             this.stderr = fs.readFileSync('error.log');

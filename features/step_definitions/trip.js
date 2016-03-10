@@ -2,9 +2,9 @@ var util = require('util');
 
 module.exports = function () {
     this.When(/^I plan a trip I should get$/, (table) => {
-        this.reprocess();
         var actual = [];
-        this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), () => {
+
+        this.reprocessAndLoadData(() => {
             table.hashes().forEach((row, ri) => {
                 var got = {},
                     response;
