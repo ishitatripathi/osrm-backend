@@ -13,37 +13,39 @@ module.exports = function () {
                 if (!outNode) throw new Error(util.format('*** unknown out-node "%s"'), row.out);
 
                 this.requestNearest(inNode, this.queryParams, (err, response, body) => {
+                    if (err) cb(err);
                     var coord;
 
-                    if (response.code === '200' && response.body.length) {
+                    if (response.statusCode === 200 && response.body.length) {
                         var json = JSON.parse(response.body);
 
-                        if (json.status === 200) {
-                            coord = json.mapped_coordinate;
-                        }
-                    }
+                        coord = json.mapped_coordinate;
 
-                    var got = { in: row.in, out: row.out };
+                        var got = { in: row.in, out: row.out };
 
-                    var ok = true;
+                        var ok = true;
 
-                    Object.keys(row).forEach((key) => {
-                        if (key === 'out') {
-                            if (this.FuzzyMatch.matchLocation(coord, outNode)) {
-                                got[key] = row[key];
-                            } else {
-                                row[key] = util.format('%s [%d,%d]', row[key], outNode.lat, outNode.lon);
-                                ok = false;
+                        Object.keys(row).forEach((key) => {
+                            if (key === 'out') {
+                                if (this.FuzzyMatch.matchLocation(coord, outNode)) {
+                                    got[key] = row[key];
+                                } else {
+                                    row[key] = util.format('%s [%d,%d]', row[key], outNode.lat, outNode.lon);
+                                    ok = false;
+                                }
                             }
+                        });
+
+                        if (!ok) {
+                            var failed = { attempt: 'nearest', query: this.query, response: response };
+                            this.logFail(row, got, [failed]);
                         }
-                    });
 
-                    if (!ok) {
-                        var failed = { attempt: 'nearest', query: this.query, response: response };
-                        this.logFail(row, got, [failed]);
+                        cb(null, got);
                     }
-
-                    cb(null, got);
+                    else {
+                        cb();
+                    }
                 });
             };
 
