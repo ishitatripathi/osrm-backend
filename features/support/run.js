@@ -25,10 +25,10 @@ module.exports = function () {
             opts = ops.replace('{profile}', [this.PROFILES_PATH, this.profile + '.lua'].join('/'));
         }
 
-        var cmd = util.format('%s%s%s/%s%s%s %s 2>error.log', this.QQ, this.LOAD_LIBRARIES, this.BIN_PATH, bin, this.EXE, this.QQ, opts);
+        var cmd = util.format('%s%s%s/%s%s%s %s 2>%s', this.QQ, this.LOAD_LIBRARIES, this.BIN_PATH, bin, this.EXE, this.QQ, opts, this.ERROR_LOG_FILE);
         exec(cmd, (err, stdout, stderr) => {
             this.stdout = stdout;
-            this.stderr = fs.readFileSync('error.log');
+            this.stderr = fs.readFileSync(this.ERROR_LOG_FILE);
             this.exitCode = err && err.code || 0;
             callback(err, stdout, stderr);
             // TODO ? ^

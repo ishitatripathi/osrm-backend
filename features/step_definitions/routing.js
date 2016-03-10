@@ -12,12 +12,15 @@ module.exports = function () {
                     json;
 
                 var afterRequest = (err, res, body) => {
-                    var instructions, bearings, compasses, turns, modes, times, distances;
-
+                    if (err) return cb(err);
                     if (body && body.length) {
+                        var instructions, bearings, compasses, turns, modes, times, distances;
+
                         json = JSON.parse(body);
 
-                        if (json.status === 200) {
+                        var hasRoute = json.status === 200;
+
+                        if (hasRoute) {
                             instructions = this.wayList(json.route_instructions);
                             bearings = this.bearingList(json.route_instructions);
                             compasses = this.compassList(json.route_instructions);
@@ -26,98 +29,101 @@ module.exports = function () {
                             times = this.timeList(json.route_instructions);
                             distances = this.distanceList(json.route_instructions);
                         }
-                    }
 
-                    if (headers.has('status')) {
-                        got.status = json.status.toString();
-                    }
-
-                    if (headers.has('message')) {
-                        got.message = json.status_message;
-                    }
-
-                    if (headers.has('#')) {
-                        // comment column
-                        got['#'] = row['#'];
-                    }
-
-                    // TODO this feels like has been repeated from elsewhere.....
-
-                    if (headers.has('start')) {
-                        got.start = instructions ? json.route_summary.start_point : null;
-                    }
-
-                    if (headers.has('end')) {
-                        got.end = instructions ? json.route_summary.end_point : null;
-                    }
-
-                    if (headers.has('geometry')) {
-                        got.geometry = json.route_geometry;
-                    }
-
-                    if (headers.has('route')) {
-                        got.route = (instructions || '').trim();
-
-                        if (headers.has('alternative')) {
-                            got.alternative = json.found_alternative ?
-                                wayList(json.alternative_instructions[0]) : '';
+                        if (headers.has('status')) {
+                            got.status = json.status.toString();
                         }
 
-                        var distance = json.route_summary.total_distance,
-                            time = json.route_summary.total_time;
+                        if (headers.has('message')) {
+                            got.message = json.status_message;
+                        }
 
-                        if (headers.has('distance')) {
-                            if (row.distance.length) {
-                                if (!row.distance.match(/\d+m/))
-                                    throw new Error('*** Distance must be specified in meters. (ex: 250m)');
-                                got.distance = instructions ? util.format('%dm', distance) : '';
+                        if (headers.has('#')) {
+                            // comment column
+                            got['#'] = row['#'];
+                        }
+
+                        // TODO this feels like has been repeated from elsewhere.....
+
+                        if (headers.has('start')) {
+                            got.start = instructions ? json.route_summary.start_point : null;
+                        }
+
+                        if (headers.has('end')) {
+                            got.end = instructions ? json.route_summary.end_point : null;
+                        }
+
+                        if (headers.has('geometry')) {
+                            got.geometry = json.route_geometry;
+                        }
+
+                        if (headers.has('route')) {
+                            got.route = (instructions || '').trim();
+
+                            if (headers.has('alternative')) {
+                                got.alternative = json.found_alternative ?
+                                    wayList(json.alternative_instructions[0]) : '';
                             }
+
+                            var distance = hasRoute && json.route_summary.total_distance,
+                                time = hasRoute && json.route_summary.total_time;
+
+                            if (headers.has('distance')) {
+                                if (row.distance.length) {
+                                    if (!row.distance.match(/\d+m/))
+                                        throw new Error('*** Distance must be specified in meters. (ex: 250m)');
+                                    got.distance = instructions ? util.format('%dm', distance) : '';
+                                }
+                            }
+
+                            if (headers.has('time')) {
+                                if (!row.time.match(/\d+s/))
+                                    throw new Error('*** Time must be specied in seconds. (ex: 60s)');
+                                got.time = instructions ? util.format('%ds', time) : '';
+                            }
+
+                            if (headers.has('speed')) {
+                                if (row.speed !== '' && instructions) {
+                                    if (!row.speed.match(/\d+ km\/h/))
+                                        throw new Error('*** Speed must be specied in km/h. (ex: 50 km/h)');
+                                    var speed = time > 0 ? Math.round(3.6*distance/time) : null;
+                                    got.speed = util.format('%d km/h', speed);
+                                } else {
+                                    got.speed = '';
+                                }
+                            }
+
+                            function putValue(key, value) {
+                                if (headers.has(key)) got[key] = instructions ? value : '';
+                            }
+
+                            putValue('bearing', bearings);
+                            putValue('compass', compasses);
+                            putValue('turns', turns);
+                            putValue('modes', modes);
+                            putValue('times', times);
+                            putValue('distances', distances);
                         }
 
-                        if (headers.has('time')) {
-                            if (!row.time.match(/\d+s/))
-                                throw new Error('*** Time must be specied in seconds. (ex: 60s)');
-                            got.time = instructions ? util.format('%ds', time) : '';
-                        }
+                        ok = true;
 
-                        if (headers.has('speed')) {
-                            if (row.speed !== '' && instructions) {
-                                if (!row.speed.match(/\d+ km\/h/))
-                                    throw new Error('*** Speed must be specied in km/h. (ex: 50 km/h)');
-                                var speed = time > 0 ? Math.round(3.6*distance/time) : null;
-                                got.speed = util.format('%d km/h', speed);
+                        for (var key in row) {
+                            if (this.FuzzyMatch.match(got[key], row[key])) {
+                                got[key] = row[key];
                             } else {
-                                got.speed = '';
+                                ok = false;
                             }
                         }
 
-                        function putValue(key, value) {
-                            if (headers.has(key)) got[key] = instructions ? value : '';
+                        if (!ok) {
+                            this.logFail(row, got, { route: { query: this.query, response: res }});
                         }
 
-                        putValue('bearing', bearings);
-                        putValue('compass', compasses);
-                        putValue('turns', turns);
-                        putValue('modes', modes);
-                        putValue('times', times);
-                        putValue('distances', distances);
+                        cb(null, got);
+                    } else {
+                        // TODO
+                        cb(true);
                     }
-
-                    ok = true;
-
-                    for (var key in row) {
-                        if (this.FuzzyMatch.match(got[key], row[key])) {
-                            got[key] = row[key];
-                        } else {
-                            ok = false;
-                        }
-                    }
-
-                    if (!ok) {
-                        this.logFail(row, got, { route: { query: this.query, response: res }});
-                    }
-
-                    cb(null, got);
                 }
 
                 if (row.request) {

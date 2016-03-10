@@ -73,7 +73,10 @@ stxxl.errlog
 ###################
 /sandbox/
 
+# Test related files #
+######################
 /test/profile.lua
+node_modules
 
 # Deprecated config file #
 ##########################

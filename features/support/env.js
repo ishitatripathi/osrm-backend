@@ -12,7 +12,7 @@ module.exports = function () {
         this.OSM_GENERATOR = 'osrm-test';
         this.OSM_UID = 1;
         this.TEST_FOLDER = path.resolve(this.ROOT_FOLDER, 'test');
-        this.DATA_FOLDER = 'cache';
+        this.DATA_FOLDER = path.resolve(this.TEST_FOLDER, 'cache');
         this.OSM_TIMESTAMP = '2000-01-01T00:00:00Z';
         this.DEFAULT_SPEEDPROFILE = 'bicycle';
         this.WAY_SPACING = 100;
@@ -25,7 +25,8 @@ module.exports = function () {
         this.LAUNCH_TIMEOUT = 1000;
         this.SHUTDOWN_TIMEOUT = 10000;
         this.DEFAULT_LOAD_METHOD = 'datastore';
-        this.OSRM_ROUTED_LOG_FILE = 'osrm-routed.log';
+        this.OSRM_ROUTED_LOG_FILE = path.resolve(this.TEST_FOLDER, 'osrm-routed.log');
+        this.ERROR_LOG_FILE = path.resolve(this.TEST_FOLDER, 'error.log');
 
         // OS X shim to ensure shared libraries from custom locations can be loaded
         // This is needed in OS X >= 10.11 because DYLD_LIBRARY_PATH is blocked
