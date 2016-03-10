@@ -1,13 +1,13 @@
 var util = require('util');
 
 module.exports = function () {
-    this.When(/^I match I should get$/, (table) => {
+    this.When(/^I match I should get$/, (table, callback) => {
         var actual = [],
             response,
             got;
 
         this.reprocessAndLoadData(() => {
-            table.hashes().forEach((row, ri) => {
+            var testRow = (row, ri, cb) => {
                 if (row.request) {
                     got = {};
                     got.request = row.request;
@@ -112,9 +112,12 @@ module.exports = function () {
 
                 row.matchings.split(',').forEach((sub, si) => {
                     if (si >= subMatchings.length) {
-                        ok = false;
+                        // ok = false;
+                        cb(true);
                     } else {
-                        sub.length.times.forEach((ni) => {
+                        var sq = d3.queue();
+
+                        var testSubMatching = (ni, scb) => {
                             var node = this.findNodeByName(sub[ni]),
                                 outNode = subMatchings[si][ni];
 
@@ -126,30 +129,31 @@ module.exports = function () {
                                 extendedTarget += util.format('%s [%d,%d]');            // TODO these may also be strings (%s) ? idk
                                 ok = false;
                             }
-                        });
-
-                        if (ok) {
-                            if (table.headers.matchings) {
-                                got.matchings = row.matchings;
-                            }
-
-                            if (table.headers.timestamps) {
-                                got.timestamps = row.timestamps;
-                            }
-                        } else {
-                            got.matchings = encodedResult;
-                            row.matchings = extendedTarget;
-                            this.logFail(row, got, { matching: { query: query, response: response } });
+                            scb(!ok);
                         }
 
-                        actual.push(got);
+                        sq.awaitAll((err) => {
+                            if (ok) {
+                                if (table.headers.matchings) {
+                                    got.matchings = row.matchings;
+                                }
+
+                                if (table.headers.timestamps) {
+                                    got.timestamps = row.timestamps;
+                                }
+                            } else {
+                                got.matchings = encodedResult;
+                                row.matchings = extendedTarget;
+                                this.logFail(row, got, { matching: { query: query, response: response } });
+                            }
+
+                            cb(null, got);
+                        });
                     }
                 });
-            });
+            };
         });
 
-        // TODO again, wtf is
-        // table.diff! actual
-        table.diff(actual);
+        this.processRowsAndDiff(table, testRow, callback);
     });
 }

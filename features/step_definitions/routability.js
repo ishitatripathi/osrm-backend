@@ -47,22 +47,7 @@ module.exports = function () {
                     }, row);
                 }
 
-                var q = d3.queue();
-
-                table.hashes().forEach((row, i) => {
-                    // TODO does this preserve order???
-                    q.defer(testRow, row, i);
-                });
-
-                q.awaitAll((err, actual) => {
-                    if (err) return callback(err);
-                    this.diffTables(table, actual, {}, callback);
-                    // callback(new Error('wrong'))
-
-                    // TODO again
-                    // return table.diff(actual);
-                    // return true;
-                });
+                this.processRowsAndDiff(table, testRow, callback);
             });
         });
     });

@@ -175,19 +175,19 @@ module.exports = function () {
                 }
             };
 
-            var q = d3.queue();
-            table.hashes().forEach((row, ri) => { q.defer(requestRow, row, ri); });
-            q.awaitAll((err, gotArray) => {
-                this.diffTables(table, gotArray, {}, callback);
-            });
+            this.processRowsAndDiff(table, requestRow, callback);
         });
     });
 
-    this.When(/^I route (\d+) times I should get$/, (n, table) => {
+    this.When(/^I route (\d+) times I should get$/, (n, table, callback) => {
         var ok = true;
+
+        var q = d3.queue();
+
         for (var i=0; i<n; i++) {
-            if (!step('I route I should get', table)) ok = false;
+            q.defer(step, 'I route I should get', table);
         }
-        return ok;
+
+        q.awaitAll(callback);
     });
 }

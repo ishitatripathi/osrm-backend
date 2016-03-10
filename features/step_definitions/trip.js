@@ -1,11 +1,11 @@
 var util = require('util');
 
 module.exports = function () {
-    this.When(/^I plan a trip I should get$/, (table) => {
+    this.When(/^I plan a trip I should get$/, (table, callback) => {
         var actual = [];
 
         this.reprocessAndLoadData(() => {
-            table.hashes().forEach((row, ri) => {
+            var testRow = (row, ri, cb) => {
                 var got = {},
                     response;
                 if (row.request) {
@@ -113,11 +113,11 @@ module.exports = function () {
                     this.logFail(row, got, { trip: { query: this.query, response: response }});
                 }
 
-                actual.push(got);
-            });
-        });
+                // TODO better error
+                cb(null, got);
+            };
 
-        // TODO again
-        return table.diff(actual);
+            this.processRowsAndDiff(table, testRow, callback);
+        });
     });
 }

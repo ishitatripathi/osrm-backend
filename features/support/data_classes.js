@@ -46,22 +46,6 @@ module.exports = {
         }
     },
 
-    // _osmStr: class {
-    //     constructor (DB) {
-    //         this.str = null;
-    //         this.DB = DB;
-    //     }
-
-    //     get xml () {
-    //         if (!this.str) this.str = this.DB.toXML();
-    //         return this.str;
-    //     }
-
-    //     clear () {
-    //         this.str = null;
-    //     }
-    // },
-
     FuzzyMatch: class {
         match (got, want) {
             var matchPercent = want.match(/(.*)\s+~(.+)%$/),

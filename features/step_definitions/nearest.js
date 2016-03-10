@@ -1,56 +1,54 @@
 var util = require('util');
 
 module.exports = function () {
-    this.When(/^I request nearest I should get$/, (table) => {
+    this.When(/^I request nearest I should get$/, (table, callback) => {
         var actual = [];
 
         this.reprocessAndLoadData(() => {
-            table.hashes().forEach((row, ri) => {
+            var testRow = (row, ri, cb) => {
                 var inNode = this.findNodeByName(row.in);
                 if (!inNode) throw new Error(util.format('*** unknown in-node "%s"'), row.in);
 
                 var outNode = this.findNodeByName(row.out);
                 if (!outNode) throw new Error(util.format('*** unknown out-node "%s"'), row.out);
 
-                var response = requestNearest(inNode, this.queryParams);
+                this.requestNearest(inNode, this.queryParams, (err, response, body) => {
+                    var coord;
 
-                var coord;
+                    if (response.code === '200' && response.body.length) {
+                        var json = JSON.parse(response.body);
 
-                if (response.code === '200' && response.body.length) {
-                    var json = JSON.parse(response.body);
-
-                    if (json.status === 200) {
-                        coord = json.mapped_coordinate;
-                    }
-                }
-
-                var got = { in: row.in, out: row.out };
-
-                var ok = true;
-
-                Object.keys(row).forEach((key) => {
-                    if (key === 'out') {
-                        if (this.FuzzyMatch.matchLocation(coord, outNode)) {
-                            got[key] = row[key];
-                        } else {
-                            row[key] = util.format('%s [%d,%d]', row[key], outNode.lat, outNode.lon);
-                            ok = false;
+                        if (json.status === 200) {
+                            coord = json.mapped_coordinate;
                         }
                     }
+
+                    var got = { in: row.in, out: row.out };
+
+                    var ok = true;
+
+                    Object.keys(row).forEach((key) => {
+                        if (key === 'out') {
+                            if (this.FuzzyMatch.matchLocation(coord, outNode)) {
+                                got[key] = row[key];
+                            } else {
+                                row[key] = util.format('%s [%d,%d]', row[key], outNode.lat, outNode.lon);
+                                ok = false;
+                            }
+                        }
+                    });
+
+                    if (!ok) {
+                        var failed = { attempt: 'nearest', query: this.query, response: response };
+                        this.logFail(row, got, [failed]);
+                    }
+
+                    cb(null, got);
                 });
+            };
 
-                if (!ok) {
-                    var failed = { attempt: 'nearest', query: this.query, response: response };
-                    this.logFail(row, got, [failed]);
-                }
-
-                actual.push(got);
-            });
+            this.processRowsAndDiff(table, testRow, callback);
         });
-
-        // TODO this again
-        // is this a return maybe?
-        return table.diff(actual);
     });
 
     this.When(/^I request nearest (\d+) times I should get$/, (n, table) => {
@@ -63,11 +61,4 @@ module.exports = function () {
 
         return ok;
     });
-    // When /^I request nearest (\d+) times I should get$/ do |n,table|
-    //   ok = true
-    //   n.to_i.times do
-    //     ok = false unless step "I request nearest I should get", table
-    //   end
-    //   ok
-    // end
 }

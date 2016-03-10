@@ -1,8 +1,8 @@
 var assert = require('assert');
 
 module.exports = function () {
-    this.When(/^I run "osrm\-routed\s?(.*?)"$/, { timeout: this.SHUTDOWN_TIMEOUT }, (options) => {
-        this.runBin('osrm-routed', options);
+    this.When(/^I run "osrm\-routed\s?(.*?)"$/, { timeout: this.SHUTDOWN_TIMEOUT }, (options, callback) => {
+        this.runBin('osrm-routed', options, callback);
         // TODO does this timeout work like this? RB version was
         // begin
         //   Timeout.timeout(SHUTDOWN_TIMEOUT) { run_bin 'osrm-routed', options }
@@ -11,16 +11,16 @@ module.exports = function () {
         // end
     });
 
-    this.When(/^I run "osrm\-extract\s?(.*?)"$/, (options) => {
-        this.runBin('osrm-extract', options);
+    this.When(/^I run "osrm\-extract\s?(.*?)"$/, (options, callback) => {
+        this.runBin('osrm-extract', options, callback);
     });
 
-    this.When(/^I run "osrm\-prepare\s?(.*?)"$/, (options) => {
-        this.runBin('osrm-prepare', options);
+    this.When(/^I run "osrm\-prepare\s?(.*?)"$/, (options, callback) => {
+        this.runBin('osrm-prepare', options, callback);
     });
 
-    this.When(/^I run "osrm\-datastore\s?(.*?)"$/, (options) => {
-        this.runBin('osrm-datastore', options)
+    this.When(/^I run "osrm\-datastore\s?(.*?)"$/, (options, callback) => {
+        this.runBin('osrm-datastore', options, callback);
     });
 
     this.Then(/^it should exit with code (\d+)$/, (code) => {

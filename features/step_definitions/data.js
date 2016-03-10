@@ -12,11 +12,6 @@ module.exports = function () {
         callback();
     });
 
-    // this.Given(/^the import format "(.*?)"$/, (format, callback) => {
-    //     this.setInputFormat(format);
-    //     callback();
-    // });
-
     this.Given(/^the extract extra arguments "(.*?)"$/, (args, callback) => {
         this.setExtractArgs(args);
         callback();
@@ -232,32 +227,29 @@ module.exports = function () {
             this.writeInputData(callback);
         } catch(e) {
             this.processError = e;
+            callback(e);
         }
     });
 
     this.Given(/^the data has been extracted$/, (callback) => {
-        try {
-            this.writeInputData();
-            if (!this.extracted) this.extractData(callback);
-        } catch(e) {
-            this.processError = e;
-        }
+        this.writeInputData((err) => {
+            if (err) this.processError = e;
+            callback(e);
+        });
     });
 
     this.Given(/^the data has been prepared$/, (callback) => {
-        try {
-            this.reprocess(callback);
-        } catch(e) {
-            this.processError = e;
-        }
+        this.reprocess((err) => {
+            if (err) this.processError = err;
+            callback(err);
+        });
     });
 
     this.Given(/^osrm\-routed is stopped$/, (callback) => {
-        try {
-            this.OSRMLoader.shutdown(callback);
-        } catch(e) {
-            this.processError = e;
-        }
+        this.OSRMLoader.shutdown((err) => {
+            if (err) this.processError = err;
+            callback(err);
+        });
     });
 
     this.Given(/^data is loaded directly/, () => {

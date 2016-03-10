@@ -144,7 +144,6 @@ module.exports = function () {
             });
         });
     }
-
     this.makeOSMId = () => {
         this.osmID = this.osmID + 1;
         return this.osmID;
@@ -162,6 +161,7 @@ module.exports = function () {
     }
 
     this.writeOSM = (callback) => {
+        // TODO un-syncify all of this
         if (!fs.existsSync(this.DATA_FOLDER)) fs.mkdirSync(this.DATA_FOLDER);
         var osmPath = path.resolve(this.DATA_FOLDER, util.format('%s.osm', this.osmData.osmFile));
         if (!fs.existsSync(osmPath)) {
@@ -184,7 +184,8 @@ module.exports = function () {
     }
 
     this.writeInputData = (callback) => {
-        this.writeOSM(() => {
+        this.writeOSM((err) => {
+            if (err) return callback(err);
             this.writeTimestamp(callback)});
     }
 
@@ -287,6 +288,17 @@ module.exports = function () {
     this.reprocessAndLoadData = (callback) => {
         this.reprocess(() => {
             this.OSRMLoader.load(util.format('%s.osrm', this.osmData.preparedFile), callback);
+        });
+    }
+
+    this.processRowsAndDiff = (table, fn, callback) => {
+        var q = d3.queue();
+
+        table.hashes().forEach((row, i) => q.defer(fn, row, i));
+
+        q.awaitAll((err, actual) => {
+            if (err) return callback(err);
+            this.diffTables(table, actual, {}, callback);
         });
     }
 }
