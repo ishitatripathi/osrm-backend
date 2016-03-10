@@ -22,7 +22,7 @@ module.exports = function () {
 
     this.buildWaysFromTable = (table, callback) => {
         // add one unconnected way for each row
-        table.hashes().forEach((row, ri) => {
+        var buildRow = (row, ri, cb) => {
             // TODO comments ported directly
             // NOTE: currently osrm crashes when processing an isolated oneway with just 2 nodes, so we use 4 edges
             // this is related to the fact that a oneway dead-end street doesn't make a lot of sense
@@ -84,9 +84,15 @@ module.exports = function () {
             for (var k in nodeTags) {
                 nodes[2].addTag(k, nodeTags[k]);     // TODO i wonder why only node[2] (node3) ??
             }
+            cb();
+        };
+
+        var q = d3.queue();
+        table.hashes().forEach((row, ri) => {
+            q.defer(buildRow, row, ri);
         });
 
-        callback();
+        q.awaitAll(callback);
     }
 
     this.tableCoordToLonLat = (ci, ri) => {
@@ -169,14 +175,20 @@ module.exports = function () {
         } else callback();
     }
 
-    this.extracted = () => {
-        return fs.existsSync(util.format('%s.osrm', this.osmData.extractedFile)) &&
-            fs.existsSync(util.format('%s.osrm.names', this.osmData.extractedFile)) &&
-            fs.existsSync(util.format('%s.osrm.restrictions', this.osmData.extractedFile));
+    this.isExtracted = (callback) => {
+        fs.exists(util.format('%s.osrm', this.osmData.extractedFile), (core) => {
+            if (!core) return callback(false);
+            fs.exists(util.format('%s.osrm.names', this.osmData.extractedFile), (names) => {
+                if (!names) return callback(false);
+                fs.exists(util.format('%s.osrm.restrictions', this.osmData.extractedFile), (restrictions) => {
+                    return callback(restrictions);
+                });
+            });
+        });
     }
 
-    this.prepared = () => {
-        return fs.existsSync(util.format('%s.osrm.hsgr', this.osmData.preparedFile));
+    this.isPrepared = (callback) => {
+        fs.exists(util.format('%s.osrm.hsgr', this.osmData.preparedFile), callback);
     }
 
     this.writeTimestamp = (callback) => {
@@ -269,20 +281,22 @@ module.exports = function () {
     this.reprocess = (callback) => {
         var noop = (cb) => cb();
 
-        var _extract = !this.extracted() ? this.extractData : noop;
-        var _prepare = !this.prepared() ? this.prepareData : noop;
-
         this.osmData.populate(() => {
             this.writeInputData(() => {
-                _extract(() => {
-                    _prepare(() => {
-                        this.logPreprocessDone();
-                        callback();
+                this.isExtracted((isExtracted) => {
+                    var extractFn = isExtracted ? noop : this.extractData;
+                    extractFn(() => {
+                        this.isPrepared((isPrepared) => {
+                            var prepareFn = isPrepared ? noop : this.prepareData;
+                            prepareFn(() => {
+                                this.logPreprocessDone();
+                                callback();
+                            });
+                        });
                     });
                 });
             });
         });
-
     }
 
     this.reprocessAndLoadData = (callback) => {

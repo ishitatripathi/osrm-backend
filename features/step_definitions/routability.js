@@ -10,7 +10,6 @@ module.exports = function () {
             if (!directions.some(k => !!table.hashes()[0].hasOwnProperty(k))) {
                throw new Error('*** routability table must contain either "forw", "backw" or "bothw" column');
             }
-
             this.reprocessAndLoadData(() => {
                 var testRow = (row, i, cb) => {
                     var outputRow = row,
