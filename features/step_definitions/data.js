@@ -237,21 +237,21 @@ module.exports = function () {
     this.Given(/^the data has been extracted$/, (callback) => {
         this.writeAndExtract((err) => {
             if (err) this.processError = err;
-            callback(err);
+            callback();
         });
     });
 
     this.Given(/^the data has been prepared$/, (callback) => {
         this.reprocess((err) => {
             if (err) this.processError = err;
-            callback(err);
+            callback();
         });
     });
 
     this.Given(/^osrm\-routed is stopped$/, (callback) => {
         this.OSRMLoader.shutdown((err) => {
             if (err) this.processError = err;
-            callback(err);
+            callback();
         });
     });
 

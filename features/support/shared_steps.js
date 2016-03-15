@@ -146,8 +146,6 @@ module.exports = function () {
                         waypoints = [],
                         bearings = [];
 
-                    console.log('PARAMS', params, defaultParams, userParams)
-
                     if (row.bearings) {
                         got.bearings = row.bearings;
                         bearings = row.bearings.split(' ').filter(b => !!b);

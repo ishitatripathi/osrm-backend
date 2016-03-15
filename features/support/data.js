@@ -283,11 +283,13 @@ module.exports = function () {
     var noop = (cb) => cb();
 
     this.reprocess = (callback) => {
-        this.writeAndExtract(() => {
+        this.writeAndExtract((e) => {
+            if (e) return callback(e);
             this.isPrepared((isPrepared) => {
                 var prepareFn = isPrepared ? noop : this.prepareData;
                 if (isPrepared) this.log('Already extracted ' + this.osmData.preparedFile, 'preprocess');
-                prepareFn(() => {
+                prepareFn((e) => {
+                    if (e) return callback(e);
                     this.logPreprocessDone();
                     callback();
                 });
@@ -297,12 +299,13 @@ module.exports = function () {
 
     this.writeAndExtract = (callback) => {
         this.osmData.populate(() => {
-            this.writeInputData(() => {
+            this.writeInputData((e) => {
+                if (e) return callback(e);
                 this.isExtracted((isExtracted) => {
                     var extractFn = isExtracted ? noop : this.extractData;
                     if (isExtracted) this.log('Already extracted ' + this.osmData.extractedFile, 'preprocess');
-                    extractFn(() => {
-                        callback();
+                    extractFn((e) => {
+                        callback(e);
                     });
                 });
             });

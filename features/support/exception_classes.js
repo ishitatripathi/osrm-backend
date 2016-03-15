@@ -39,6 +39,8 @@ var OSRMError = class extends Error {
 }
 
 module.exports = {
+    OSRMError: OSRMError,
+
     FileError: class extends OSRMError {
         constructor (logFile, code, msg) {
             super ('fileutil', code, msg, logFile, 5);
