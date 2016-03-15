@@ -132,7 +132,7 @@ module.exports = function () {
         if (instructions) {
             return instructions.filter(r => r[0].toString() !== this.DESTINATION_REACHED.toString())
                 .map(r => r[index])
-                .map(r => (!r || r == '') ? '""' : '' + r + (postfix || ''))
+                .map(r => (isNaN(parseInt(r)) && (!r || r == '')) ? '""' : '' + r + (postfix || ''))
                 .join(',');
         }
     }

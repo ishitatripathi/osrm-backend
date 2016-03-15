@@ -4,12 +4,14 @@ module.exports = function () {
     this.When(/^I request a travel time matrix I should get$/, (table, callback) => {
         var NO_ROUTE = 2147483647    // MAX_INT
 
-        if (table.headers[0] !== '') throw new Error('*** Top-left cell of matrix table must be empty');
+        var tableRows = table.raw();
+
+        if (tableRows[0][0] !== '') throw new Error('*** Top-left cell of matrix table must be empty');
 
         var waypoints = [],
-            columnHeaders = [],
-            rowHeaders = table.rows.map((h) => h[0]),
-            symmetric = Set(columnHeaders) == Set(rowHeaders);
+            columnHeaders = tableRows[0].slice(1),
+            rowHeaders = tableRows.map((h) => h[0]).slice(1),
+            symmetric = columnHeaders.every((ele, i) => ele === rowHeaders[i]);
 
         if (symmetric) {
             columnHeaders.forEach((nodeName) => {
@@ -42,20 +44,25 @@ module.exports = function () {
                 if (!response.body.length) throw Error("TODO WTF");
 
                 var jsonResult = JSON.parse(response.body),
-                    result = jsonResult['distance_table'];
+                    result = jsonResult['distance_table'].map((row, i) => {
+                        var hashes = {};
+                        row.forEach((c, j) => {
+                            hashes[tableRows[0][j+1]] = c;
+                        });
+                        return hashes;
+                    });
 
-                var testRow = (row, ri, vb) => {
+                var testRow = (row, ri, cb) => {
                     // fuzzy match
                     var ok = true;
 
-                    // TODO is this going to race?
-                    for (var i=0; i<=result[ri].length-1; i++) {
-                        if (this.FuzzyMatch.match(result[ri][i], row[i+1])) {
-                            result[ri][i] = row[i+1];
-                        } else if (row[i+1] === '' && result[ri][i] === NO_ROUTE) {
-                            result[ri][i] = '';
+                    for (var k in result[ri]) {
+                        if (this.FuzzyMatch.match(result[ri][k], row[k])) {
+                            result[ri][k] = row[k];
+                        } else if (row[k] === '' && result[ri][k] === NO_ROUTE) {
+                            result[ri][k] = '';
                         } else {
-                            result[ri][i] = result[ri][i].toString();
+                            result[ri][k] = result[ri][k].toString();
                             ok = false;
                         }
                     }
@@ -66,8 +73,8 @@ module.exports = function () {
                         this.logFail(row, result[ri], [failed]);
                     }
 
-                    r = [].concat.apply([], row[0], result[ri]);
-                    cb(null, r);
+                    result[ri][''] = row[''];
+                    cb(null, result[ri]);
                 };
 
                 this.processRowsAndDiff(table, testRow, callback);

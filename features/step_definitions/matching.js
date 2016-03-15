@@ -43,7 +43,7 @@ module.exports = function () {
                             timestamps = row.timestamps.split(' ').filter(s => !!s).map(t => parseInt(t));
                         }
                         got.trace = row.trace;
-                        response = requestMatching(trace, timestamps, params);
+                        response = this.requestMatching(trace, timestamps, params);
                     } else {
                         throw new Error('*** no trace');
                     }
