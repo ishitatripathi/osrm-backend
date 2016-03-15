@@ -65,9 +65,11 @@ module.exports = function () {
         assert.equal(this.stdout.split('\n').length - 1, parseInt(lines));
     });
 
-    this.Given(/^the query options$/, (table) => {
-        table.hashes().forEach((k, v) => {
-            this.queryParams.push([k, v]);
+    this.Given(/^the query options$/, (table, callback) => {
+        table.raw().forEach((tuple) => {
+            this.queryParams.push(tuple);
         });
+
+        callback();
     });
 }

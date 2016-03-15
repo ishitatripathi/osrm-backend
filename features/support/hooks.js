@@ -40,13 +40,7 @@ module.exports = function () {
         callback();
     });
 
-    this.Around('@stress', (scenario, block, callback) => {
-        var limit = Timeout(this.STRESS_TIMEOUT);
-
-        function runBlock (cb) {
-            block.call(cb);
-        }
-
-        runBlock(limit(callback));
+    this.Around('@stress', (scenario, callback) => {
+        setTimeout(callback, this.STRESS_TIMEOUT);
     });
 }
