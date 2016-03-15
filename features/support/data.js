@@ -280,23 +280,29 @@ module.exports = function () {
         });
     }
 
-    this.reprocess = (callback) => {
-        var noop = (cb) => cb();
+    var noop = (cb) => cb();
 
+    this.reprocess = (callback) => {
+        this.writeAndExtract(() => {
+            this.isPrepared((isPrepared) => {
+                var prepareFn = isPrepared ? noop : this.prepareData;
+                if (isPrepared) this.log('Already extracted ' + this.osmData.preparedFile, 'preprocess');
+                prepareFn(() => {
+                    this.logPreprocessDone();
+                    callback();
+                });
+            });
+        })
+    }
+
+    this.writeAndExtract = (callback) => {
         this.osmData.populate(() => {
             this.writeInputData(() => {
                 this.isExtracted((isExtracted) => {
                     var extractFn = isExtracted ? noop : this.extractData;
                     if (isExtracted) this.log('Already extracted ' + this.osmData.extractedFile, 'preprocess');
                     extractFn(() => {
-                        this.isPrepared((isPrepared) => {
-                            var prepareFn = isPrepared ? noop : this.prepareData;
-                            if (isPrepared) this.log('Already extracted ' + this.osmData.preparedFile, 'preprocess');
-                            prepareFn(() => {
-                                this.logPreprocessDone();
-                                callback();
-                            });
-                        });
+                        callback();
                     });
                 });
             });

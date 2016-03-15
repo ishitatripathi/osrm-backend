@@ -20,13 +20,13 @@ module.exports = function () {
     });
 
     this.When(/^I run "osrm\-prepare\s?(.*?)"$/, (options, callback) => {
-        this.runBin('osrm-prepare', (err, stdout, stderr) => {
+        this.runBin('osrm-prepare', options, (err, stdout, stderr) => {
             callback();
         });
     });
 
     this.When(/^I run "osrm\-datastore\s?(.*?)"$/, (options, callback) => {
-        this.runBin('osrm-datastore', (err, stdout, stderr) => {
+        this.runBin('osrm-datastore', options, (err, stdout, stderr) => {
             callback();
         });
     });
@@ -62,7 +62,7 @@ module.exports = function () {
     });
 
     this.Then(/^stdout should contain (\d+) lines?$/, (lines) => {
-        assert.equal(this.stdout.lines.length, parseInt(lines));
+        assert.equal(this.stdout.split('\n').length - 1, parseInt(lines));
     });
 
     this.Given(/^the query options$/, (table) => {

@@ -235,9 +235,9 @@ module.exports = function () {
     });
 
     this.Given(/^the data has been extracted$/, (callback) => {
-        this.writeInputData((err) => {
-            if (err) this.processError = e;
-            callback(e);
+        this.writeAndExtract((err) => {
+            if (err) this.processError = err;
+            callback(err);
         });
     });
 
