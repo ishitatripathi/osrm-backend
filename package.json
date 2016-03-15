@@ -13,8 +13,9 @@
     "xmlbuilder": "^4.2.1"
   },
   "scripts": {
-    "test": "./node_modules/cucumber/bin/cucumber.js features/",
-    "clean-test": "rm -rf test/cache"
+    "test": "./node_modules/cucumber/bin/cucumber.js features/ -p verify",
+    "clean-test": "rm -rf test/cache",
+    "cucumber": "./node_modules/cucumber/bin/cucumber.js"
   },
   "repository": {
     "type": "git",
@@ -25,5 +26,8 @@
   "bugs": {
     "url": "https://github.com/Project-OSRM/osrm-backend/issues"
   },
-  "homepage": "https://github.com/Project-OSRM/osrm-backend"
+  "homepage": "https://github.com/Project-OSRM/osrm-backend",
+  "engines": {
+    "node": ">=4.0.0"
+  }
 }

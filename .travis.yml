@@ -148,7 +148,7 @@ script:
   - ./engine-tests
   - ./util-tests
   - cd ..
-  - cucumber -p verify
+  - npm test
   - make -C test/data
   - mkdir example/build && cd example/build
   - cmake ..

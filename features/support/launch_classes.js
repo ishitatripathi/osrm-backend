@@ -25,14 +25,14 @@ var OSRMBaseLoader = class {
         runLaunch(limit((e) => { if (e) callback(e); callback(); }));
     }
 
-    shutdown () {
+    shutdown (callback) {
         var limit = Timeout(this.scope.SHUTDOWN_TIMEOUT, { err: this.scope.RoutedError('Shutting down osrm-routed timed out.')});
 
         var runShutdown = (cb) => {
             this.osrmDown(cb);
         };
 
-        runShutdown(limit((e) => { if (e) throw e; }));
+        runShutdown(limit((e) => { if (e) callback(e); callback(); }));
     }
 
     osrmIsRunning () {
@@ -87,10 +87,9 @@ var OSRMDirectLoader = class extends OSRMBaseLoader {
     load (inputFile, callback) {
         this.inputFile = inputFile;
         var startDir = process.cwd();
-        this.shutdown(() =>
-            this.launch(() =>
-                // callback(() =>
-                this.shutdown(callback)));
+        this.launch(() => {
+            this.shutdown(callback);
+        });
     }
 
     osrmUp (callback) {
@@ -153,26 +152,26 @@ module.exports = {
             this.loader = null;
         }
 
-        load (inputFile, block, callback) {
+        load (inputFile, callback) {
             var method = this.scope.loadMethod,
                 loader;
             if (method === 'datastore') {
                 this.loader = new OSRMDatastoreLoader(this.scope);
-                this.loader.load(inputFile, block, callback);
+                this.loader.load(inputFile, callback);
             } else if (method === 'directly') {
                 this.loader = new OSRMDirectLoader(this.scope);
-                this.loader.load(inputFile, block, callback);
+                this.loader.load(inputFile, callback);
             } else {
                 throw new Error('*** Unknown load method ' + method);
             }
         }
 
-        shutdown () {
+        shutdown (callback) {
             if (!this.loader) {
                 // TODO: ??
                 console.error('what there is no loader?');
             }
-            this.loader.shutdown();
+            this.loader.shutdown(callback);
         }
     }
 }

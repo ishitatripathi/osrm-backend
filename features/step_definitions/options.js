@@ -2,7 +2,9 @@ var assert = require('assert');
 
 module.exports = function () {
     this.When(/^I run "osrm\-routed\s?(.*?)"$/, { timeout: this.SHUTDOWN_TIMEOUT }, (options, callback) => {
-        this.runBin('osrm-routed', options, callback);
+        this.runBin('osrm-routed', options, (err, stdout, stderr) => {
+            callback();
+        });
         // TODO does this timeout work like this? RB version was
         // begin
         //   Timeout.timeout(SHUTDOWN_TIMEOUT) { run_bin 'osrm-routed', options }
@@ -12,15 +14,21 @@ module.exports = function () {
     });
 
     this.When(/^I run "osrm\-extract\s?(.*?)"$/, (options, callback) => {
-        this.runBin('osrm-extract', options, callback);
+        this.runBin('osrm-extract', options, (err, stdout, stderr) => {
+            callback();
+        });
     });
 
     this.When(/^I run "osrm\-prepare\s?(.*?)"$/, (options, callback) => {
-        this.runBin('osrm-prepare', options, callback);
+        this.runBin('osrm-prepare', (err, stdout, stderr) => {
+            callback();
+        });
     });
 
     this.When(/^I run "osrm\-datastore\s?(.*?)"$/, (options, callback) => {
-        this.runBin('osrm-datastore', options, callback);
+        this.runBin('osrm-datastore', (err, stdout, stderr) => {
+            callback();
+        });
     });
 
     this.Then(/^it should exit with code (\d+)$/, (code) => {
@@ -32,7 +40,7 @@ module.exports = function () {
     });
 
     this.Then(/^stderr should contain "(.*?)"$/, (str) => {
-        assert.ok(this.stdout.indexOf(str) > -1);
+        assert.ok(this.stderr.indexOf(str) > -1);
     });
 
     this.Then(/^stdout should contain \/(.*)\/$/, (regexStr) => {
@@ -58,7 +66,7 @@ module.exports = function () {
     });
 
     this.Given(/^the query options$/, (table) => {
-        table.rowsHash.forEach((k, v) => {
+        table.hashes().forEach((k, v) => {
             this.queryParams.push([k, v]);
         });
     });

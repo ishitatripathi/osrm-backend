@@ -64,13 +64,13 @@ module.exports = function () {
                 var nodeMatch = key.match(/node\/(.*)/);
                 if (nodeMatch) {
                     if (tags[key] === '(nil)') {
-                        // delete nodeTags[key];    // TODO this seems useless
+                        delete nodeTags[key];    // TODO this seems useless
                     } else {
                         nodeTags[nodeMatch[1]] = tags[key];
                     }
                 } else {
                     if (tags[key] === '(nil)') {
-                        // delete wayTags[key];    // TODO this seems useless
+                        delete wayTags[key];    // TODO this seems useless
                     } else {
                         wayTags[key] = tags[key];
                     }
@@ -205,6 +205,7 @@ module.exports = function () {
         this.logPreprocessInfo();
         this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
         // TODO replace with lib?? or just w runBin cmd
+        // TODOTODO tests sometimes race and hit /var/tmp/stxxl at the same time, and this doesn't fail loudly enough to stop an ENOENT error when trying to rename files that don't exist -- investigate
         exec(util.format('%s%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
             this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
             if (err) {
@@ -227,6 +228,7 @@ module.exports = function () {
             });
 
             q.awaitAll((err) => {
+                this.log('Finished extracting ' + this.osmData.extractedFile, 'preprocess');
                 callback(err);
             });
         });
@@ -272,7 +274,7 @@ module.exports = function () {
             });
 
             q.awaitAll((err) => {
-                this.log('', 'preprocess');
+                this.log('Finished preparing ' + this.osmData.preparedFile, 'preprocess');
                 callback(err);
             });
         });
@@ -285,9 +287,11 @@ module.exports = function () {
             this.writeInputData(() => {
                 this.isExtracted((isExtracted) => {
                     var extractFn = isExtracted ? noop : this.extractData;
+                    if (isExtracted) this.log('Already extracted ' + this.osmData.extractedFile, 'preprocess');
                     extractFn(() => {
                         this.isPrepared((isPrepared) => {
                             var prepareFn = isPrepared ? noop : this.prepareData;
+                            if (isPrepared) this.log('Already extracted ' + this.osmData.preparedFile, 'preprocess');
                             prepareFn(() => {
                                 this.logPreprocessDone();
                                 callback();

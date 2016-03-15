@@ -29,9 +29,10 @@ module.exports = {
                 // TODO this is ported from the double-hash in rb, but is it an oversight?
                 this.hash = sha1(str);
                 this.fingerprintOSM = sha1(this.hash);
-                this.osmFile = path.resolve(this.scope.DATA_FOLDER, this.fingerprintOSM);
-                this.extractedFile = path.resolve([this.osmFile, this.scope.fingerprintExtract].join('_'));
-                this.preparedFile = path.resolve([this.osmFile, this.scope.fingerprintExtract, this.scope.fingerprintPrepare].join('_'));
+
+                this.osmFile        = path.resolve(this.scope.DATA_FOLDER, this.fingerprintOSM);
+                this.extractedFile  = path.resolve([this.osmFile, this.scope.fingerprintExtract].join('_'));
+                this.preparedFile   = path.resolve([this.osmFile, this.scope.fingerprintExtract, this.scope.fingerprintPrepare].join('_'));
 
                 callback();
             });

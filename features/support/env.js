@@ -115,6 +115,6 @@ module.exports = function () {
     }
 
     process.on('exit', () => {
-        this.OSRMLoader.shutdown();
+        this.OSRMLoader.shutdown(() => {});
     });
 }

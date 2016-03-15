@@ -127,7 +127,7 @@ module.exports = function () {
         var q = d3.queue();
 
         var addWay = (row, cb) => {
-            var way = new OSM.Way(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
+            var way = new OSM.Way(this.makeOSMId(), this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
 
             var nodes = row.nodes;
             if (this.nameWayHash.nodes) throw new Error(util.format('*** duplicate way %s', nodes));
@@ -159,6 +159,8 @@ module.exports = function () {
             else
                 tags.name = row.name;
 
+            // TODO this is throwing in an extra (harmless, but extra) tag: tag k="nodes" v="nj" -- where v is duplicate of tag k="name" v="nj"
+
             way.setTags(tags);
             this.OSMDB.addWay(way);
             this.nameWayHash[nodes] = way;
@@ -176,7 +178,7 @@ module.exports = function () {
         var q = d3.queue();
 
         var addRelation = (row, cb) => {
-            var relation = new OSM.Relation(this.makeOSMId, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
+            var relation = new OSM.Relation(this.makeOSMId(), this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID);
 
             for (var key in row) {
                 var isNode = key.match(/^node:(.*)/),
@@ -202,6 +204,7 @@ module.exports = function () {
                 }
             }
             relation.uid = this.OSM_UID;
+
             this.OSMDB.addRelation(relation);
 
             cb();
@@ -224,7 +227,7 @@ module.exports = function () {
 
     this.Given(/^the data has been saved to disk$/, (callback) => {
         try {
-            this.writeInputData(callback);
+            this.reprocess(callback);
         } catch(e) {
             this.processError = e;
             callback(e);

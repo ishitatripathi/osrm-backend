@@ -41,8 +41,8 @@ module.exports = function () {
         return;          // TODO wtf??
         this.logScenarioFailInfo();
         log('== ')
-        log('Expected: ', expected);
-        log('Got:      ', got);
+        log('Expected: ' + expected);
+        log('Got:      ' + got);
         log();
         ['route','forw','backw'].forEach((direction) => {
             if (attempts[direction]) {
@@ -78,7 +78,7 @@ module.exports = function () {
     }
 
     this.logPreprocessDone = () => {
-        log('Done with preprocessing at ', new Date(), 'preprocess');
+        log('Done with preprocessing at ' + new Date(), 'preprocess');
     }
     // TODO delete? ^ i added this log message, was a noop
 }

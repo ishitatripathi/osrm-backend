@@ -152,8 +152,8 @@ module.exports = function () {
                     }
                 });
             };
-        });
 
-        this.processRowsAndDiff(table, testRow, callback);
+            this.processRowsAndDiff(table, testRow, callback);
+        });
     });
 }
