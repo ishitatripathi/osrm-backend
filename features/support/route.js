@@ -112,13 +112,13 @@ module.exports = function () {
         return this.requestPath('match', params, callback);
     }
 
-    this.gotRoute = (response) => {
-        if (response.statusCode === 200 && response.body.length) {
-            var json = JSON.parse(response.body);
-            if (json.status === 200) return this.wayList(json.route_instructions).length > 0;
-        }
-        return false;
-    }
+    // this.gotRoute = (response) => {
+    //     if (response.statusCode === 200 && response.body.length) {
+    //         var json = JSON.parse(response.body);
+    //         if (json.status === 200) return this.wayList(json.route_instructions).length > 0;
+    //     }
+    //     return false;
+    // }
 
     this.routeStatus = (response) => {
         if (response.statusCode === 200 && response.body.length) {
@@ -172,7 +172,7 @@ module.exports = function () {
         }
 
         // replace instructions codes with strings, e.g. '11-3' gets converted to 'enter_roundabout-3'
-        return instructions.map(r => r[0].toString().replace(/^(\d*)/, (match, num) => types[num])).join(',');
+        return instructions ? instructions.map(r => r[0].toString().replace(/^(\d*)/, (match, num) => types[num])).join(',') : instructions;
     }
 
     this.modeList = (instructions) => {

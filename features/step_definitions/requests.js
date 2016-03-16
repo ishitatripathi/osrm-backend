@@ -3,27 +3,23 @@ var assert = require('assert');
 module.exports = function () {
     this.When(/^I request \/(.*)$/, (path, callback) => {
         this.reprocessAndLoadData(() => {
-            this.response = this.requestPath(path, [], callback);
+            this.requestPath(path, [], (err, res, body) => {
+                this.response = res;
+                callback(err, res, body);
+            });
         });
     });
 
     this.Then(/^I should get a response/, () => {
-        assert.equal(this.response.code, '200');
-        assert.ok(this.response.body);
-        assert.ok(this.response.body.length);
+        this.ShouldGetAResponse();
     });
 
     this.Then(/^response should be valid JSON$/, (callback) => {
-        try {
-            this.json = JSON.parse(this.response.body);
-            callback();
-        } catch (e) {
-            callback(e);
-        }
+        this.ShouldBeValidJSON(callback);
     });
 
     this.Then(/^response should be well-formed$/, () => {
-        assert.equal(typeof this.json.status, 'number');
+        this.ShouldBeWellFormed();
     });
 
     this.Then(/^status code should be (\d+)$/, (code, callback) => {
@@ -47,7 +43,7 @@ module.exports = function () {
     });
 
     this.Then(/^response should be a well-formed route$/, () => {
-        this.step("response should be well-formed");
+        this.ShouldBeWellFormed();
         assert.equal(typeof this.json.status_message, 'string');
         assert.equal(typeof this.json.route_summary, 'object');
         assert.equal(typeof this.json.route_geometry, 'string');

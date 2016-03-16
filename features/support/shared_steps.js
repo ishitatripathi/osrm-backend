@@ -1,4 +1,26 @@
+var util = require('util');
+var assert = require('assert');
+
 module.exports = function () {
+    this.ShouldGetAResponse = () => {
+        assert.equal(this.response.statusCode, 200);
+        assert.ok(this.response.body);
+        assert.ok(this.response.body.length);
+    }
+
+    this.ShouldBeValidJSON = (callback) => {
+        try {
+            this.json = JSON.parse(this.response.body);
+            callback();
+        } catch (e) {
+            callback(e);
+        }
+    }
+
+    this.ShouldBeWellFormed = () => {
+        assert.equal(typeof this.json.status, 'number');
+    }
+
     this.WhenIRouteIShouldGet = (table, callback) => {
         var actual = [];
         this.reprocessAndLoadData(() => {
@@ -70,6 +92,8 @@ module.exports = function () {
                                     if (!row.distance.match(/\d+m/))
                                         throw new Error('*** Distance must be specified in meters. (ex: 250m)');
                                     got.distance = instructions ? util.format('%dm', distance) : '';
+                                } else {
+                                    got.distance = '';
                                 }
                             }
 
@@ -123,9 +147,9 @@ module.exports = function () {
                     }
                 }
 
-                if (row.request) {
+                if (headers.has('request')) {
                     got = { request: row.request };
-                    requestUrl(row.request, afterRequest);
+                    this.requestUrl(row.request, afterRequest);
                 } else {
                     var defaultParams = this.queryParams;
                     var userParams = [];

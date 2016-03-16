@@ -102,9 +102,12 @@ module.exports = function () {
         var addNode = (row, cb) => {
             // TODO not convinced by this ^
             var name = row.node,
-            node = this.findNodeByName(name);
+                node = this.findNodeByName(name);
+            delete row.node;
             if (!node) throw new Error(util.format('*** unknown node %s'), name);
-            node.push(row);
+            for (var key in row) {
+                node.addTag(key, row[key]);
+            }
             cb();
         }
 

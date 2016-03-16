@@ -1,4 +1,5 @@
 var util = require('util');
+var d3 = require('d3-queue');
 
 module.exports = function () {
     this.When(/^I match I should get$/, (table, callback) => {
@@ -8,10 +9,133 @@ module.exports = function () {
 
         this.reprocessAndLoadData(() => {
             var testRow = (row, ri, cb) => {
+                var afterRequest = (err, res, body) => {
+                    var json;
+
+                    var headers = new Set(table.raw()[0]);
+
+                    if (res.body.length) {
+                        json = JSON.parse(res.body);
+                    }
+
+                    if (headers.has('status')) {
+                        got.status = json.status.toString();
+                    }
+
+                    if (headers.has('message')) {
+                        got.message = json.status_message;
+                    }
+
+                    if (headers.has('#')) {
+                        // comment column
+                        got['#'] = row['#'];
+                    }
+
+                    var subMatchings = [],
+                        turns = '',
+                        route = '',
+                        duration = '';
+
+                    if (res.statusCode === 200) {
+                        if (headers.has('matchings')) {
+                            subMatchings = json.matchings.filter(m => !!m).map(sub => sub.matched_points);
+                        }
+
+                        if (headers.has('turns')) {
+                            if (json.matchings.length != 1) throw new Error('*** Checking turns only supported for matchings with one subtrace');
+                            turns = this.turnList(json.matchings[0].instructions);
+                        }
+
+                        if (headers.has('route')) {
+                            if (json.matchings.length != 1) throw new Error('*** Checking route only supported for matchings with one subtrace');
+                            route = this.wayList(json.matchings[0].instructions);
+                        }
+
+                        if (headers.has('duration')) {
+                            if (json.matchings.length != 1) throw new Error('*** Checking duration only supported for matchings with one subtrace');
+                            duration = json.matchings[0].route_summary.total_time;
+                        }
+                    }
+
+                    if (headers.has('turns')) {
+                        got.turns = turns;
+                    }
+
+                    if (headers.has('route')) {
+                        got.route = route;
+                    }
+
+                    if (headers.has('duration')) {
+                        got.duration = duration.toString();
+                    }
+
+                    ok = true;
+                    var encodedResult = '',
+                        extendedTarget = '';
+
+                    var q = d3.queue();
+
+                    var testSubMatching = (sub, si, scb) => {
+                        if (si >= subMatchings.length) {
+                            ok = false;
+                            q.abort();
+                            scb();
+                        } else {
+                            var sq = d3.queue();
+
+                            var testSubNode = (ni, ncb) => {
+                                var node = this.findNodeByName(sub[ni]),
+                                    outNode = subMatchings[si][ni];
+
+                                if (this.FuzzyMatch.matchLocation(outNode, node)) {
+                                    encodedResult += sub[ni];
+                                    extendedTarget += sub[ni];
+                                } else {
+                                    encodedResult += util.format('? [%s,%s]', outNode[0], outNode[1]);
+                                    extendedTarget += util.format('%s [%d,%d]', node.lat, node.lon);
+                                    ok = false;
+                                }
+                                ncb();
+                            }
+
+                            for (var i=0; i<sub.length; i++) {
+                                sq.defer(testSubNode, i);
+                            }
+
+                            sq.awaitAll(scb);
+                        }
+                    }
+
+                    row.matchings.split(',').forEach((sub, si) => {
+                        q.defer(testSubMatching, sub, si);
+                    });
+
+                    q.awaitAll(() => {
+                        if (ok) {
+                            if (headers.has('matchings')) {
+                                got.matchings = row.matchings;
+                            }
+
+                            if (headers.has('timestamps')) {
+                                got.timestamps = row.timestamps;
+                            }
+                        } else {
+                            got.matchings = encodedResult;
+                            row.matchings = extendedTarget;
+                            this.logFail(row, got, { matching: {
+                                // query: query,
+                                response: response } });
+                        }
+
+                        cb(null, got);
+                    });
+
+                }
+
                 if (row.request) {
                     got = {};
                     got.request = row.request;
-                    response = this.requestUrl(row.request);
+                    this.requestUrl(row.request, afterRequest);
                 } else {
                     var params = this.queryParams;
                     got = {};
@@ -43,114 +167,11 @@ module.exports = function () {
                             timestamps = row.timestamps.split(' ').filter(s => !!s).map(t => parseInt(t));
                         }
                         got.trace = row.trace;
-                        response = this.requestMatching(trace, timestamps, params);
+                        response = this.requestMatching(trace, timestamps, params, afterRequest);
                     } else {
                         throw new Error('*** no trace');
                     }
                 }
-
-                var json;
-
-                if (response.body.length) {
-                    json = JSON.parse(response.body);
-                }
-
-                if (table.headers.status) {
-                    got.status = json.status.toString();
-                }
-
-                if (table.headers.message) {
-                    got.message = json.status_message;
-                }
-
-                if (table.headers['#']) {
-                    // comment column
-                    got['#'] = row['#'];
-                }
-
-                var subMatchings = [],
-                    turns = '',
-                    route = '',
-                    duration = '';
-
-                if (response.code === '200') {
-                    if (table.headers.matchings) {
-                        subMatchings = json.matchings.filter(m => !!m).map(sub => sub.matched_points);
-                    }
-
-                    if (table.headers.turns) {
-                        if (json.matchings.size != 1) throw new Error('*** Checking turns only supported for matchings with one subtrace');
-                        turns = turnList(json.matchings[0].instructions);
-                    }
-
-                    if (table.headers.route) {
-                        if (json.matchings.size != 1) throw new Error('*** Checking route only supported for matchings with one subtrace');
-                        route = wayList(json.matchings[0].instructions);
-                    }
-
-                    if (table.headers.duration) {
-                        if (json.matchings.size != 1) throw new Error('*** Checking duration only supported for matchings with one subtrace');
-                        duration = json.matchings[0].route_summary.total_time;
-                    }
-                }
-
-                if (table.headers.turns) {
-                    got.turns = turns;
-                }
-
-                if (table.headers.route) {
-                    got.route = route;
-                }
-
-                if (table.headers.duration) {
-                    got.duration = duration.toString();
-                }
-
-                ok = true;
-                var encodedResult = '',
-                    extendedTarget = '';
-
-                row.matchings.split(',').forEach((sub, si) => {
-                    if (si >= subMatchings.length) {
-                        // ok = false;
-                        cb(true);
-                    } else {
-                        var sq = d3.queue();
-
-                        var testSubMatching = (ni, scb) => {
-                            var node = this.findNodeByName(sub[ni]),
-                                outNode = subMatchings[si][ni];
-
-                            if (this.FuzzyMatch.matchLocation(outNode, node)) {
-                                encodedResult += sub[ni];
-                                extendedTarget += sub[ni];
-                            } else {
-                                encodedResult += util.format('? [%s,%s]', outNode[0], outNode[1]);
-                                extendedTarget += util.format('%s [%d,%d]');            // TODO these may also be strings (%s) ? idk
-                                ok = false;
-                            }
-                            scb(!ok);
-                        }
-
-                        sq.awaitAll((err) => {
-                            if (ok) {
-                                if (table.headers.matchings) {
-                                    got.matchings = row.matchings;
-                                }
-
-                                if (table.headers.timestamps) {
-                                    got.timestamps = row.timestamps;
-                                }
-                            } else {
-                                got.matchings = encodedResult;
-                                row.matchings = extendedTarget;
-                                this.logFail(row, got, { matching: { query: query, response: response } });
-                            }
-
-                            cb(null, got);
-                        });
-                    }
-                });
             };
 
             this.processRowsAndDiff(table, testRow, callback);
