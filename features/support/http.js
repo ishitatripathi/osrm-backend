@@ -16,18 +16,16 @@ module.exports = function () {
             var uriString = baseUri,
                 params = this.paramsToString(parameters);
 
-            if (params.length) uriString += '?' + params;
-
             var options = this.httpMethod === 'POST' ? {
                 method: 'POST',
                 body: params,
-                url: uriString          // TODO is this right? or does it need w/o params?
-            } : uriString;
+                url: baseUri
+            } : baseUri + (params.length ? '?' + params : '');
 
             request(options, (err, res, body) => {
-                if (err && err.code === 'ECONNREFUSED') {           // TODO is this the code? or sth else?
+                if (err && err.code === 'ECONNREFUSED') {
                     throw new Error('*** osrm-routed is not running.');
-                } else if (err && err.statusCode === 408) {         // TODO i think this is timeout code -- verify and/or clarify
+                } else if (err && err.statusCode === 408) {
                     throw new Error();
                 }
 

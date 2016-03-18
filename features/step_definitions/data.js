@@ -82,9 +82,9 @@ module.exports = function () {
 
             if (name.match(/[a-z]/)) {
                 var id = row.id && parseInt(row.id);
-                this.addOSMNode(name, parseFloat(row.lon), parseFloat(row.lat), id);
+                this.addOSMNode(name, row.lon, row.lat, id);
             } else {
-                this.addLocation(name, parseFloat(row.lon), parseFloat(row.lat));
+                this.addLocation(name, row.lon, row.lat);
             }
 
             cb();
@@ -150,6 +150,8 @@ module.exports = function () {
                 tags[key] = row[key];
             }
 
+            delete tags.nodes;
+
             if (row.highway === '(nil)') delete tags.highway;
 
             if (row.name === undefined)
@@ -160,8 +162,6 @@ module.exports = function () {
                 delete tags.name;
             else
                 tags.name = row.name;
-
-            // TODO this is throwing in an extra (harmless, but extra) tag: tag k="nodes" v="nj" -- where v is duplicate of tag k="name" v="nj"
 
             way.setTags(tags);
             this.OSMDB.addWay(way);
@@ -265,7 +265,8 @@ module.exports = function () {
         this.loadMethod = 'datastore';
     });
 
-    this.Given(/^the HTTP method "([^"]*)"$/, (method) => {
+    this.Given(/^the HTTP method "([^"]*)"$/, (method, callback) => {
         this.httpMethod = method;
+        callback();
     });
 }

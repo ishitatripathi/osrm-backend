@@ -38,6 +38,8 @@ var OSRMError = class extends Error {
     }
 }
 
+var unescapeStr = (str) => str.replace(/\\\|/g, '\|').replace(/\\\\/g, '\\');
+
 module.exports = {
     OSRMError: OSRMError,
 
@@ -80,7 +82,7 @@ module.exports = {
                 var rowError = false;
 
                 for (var j in row) {
-                    if (row[j] != actual[i][j]) {
+                    if (unescapeStr(row[j]) != actual[i][j]) {
                         rowError = true;
                         this.hasErrors = true;
                         break;

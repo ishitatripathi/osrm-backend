@@ -60,15 +60,16 @@ class DB {
                 timestamp: w.OSM_TIMESTAMP
             });
 
+            w.nodes.forEach((k) => {
+                way.ele('nd')
+                    .att('ref', k.id);
+            });
+
             for (var k in w.tags) {
                 way.ele('tag')
                     .att('k', k)
                     .att('v', w.tags[k]);
             }
-            w.nodes.forEach((k) => {
-                way.ele('nd')
-                    .att('ref', k.id);
-            });
         });
 
         this.relations.forEach((r) => {
