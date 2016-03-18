@@ -206,6 +206,7 @@ module.exports = function () {
         this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
         // TODO replace with lib?? or just w runBin cmd
         // TODOTODO tests sometimes race and hit /var/tmp/stxxl at the same time, and this doesn't fail loudly enough to stop an ENOENT error when trying to rename files that don't exist -- investigate
+        process.chdir(this.TEST_FOLDER);
         exec(util.format('%s%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
             this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
             if (err) {
@@ -229,6 +230,7 @@ module.exports = function () {
 
             q.awaitAll((err) => {
                 this.log('Finished extracting ' + this.osmData.extractedFile, 'preprocess');
+                process.chdir('../');
                 callback(err);
             });
         });
@@ -237,6 +239,7 @@ module.exports = function () {
     this.prepareData = (callback) => {
         this.logPreprocessInfo();
         this.log(util.format('== Preparing %s.osm...', this.osmData.extractedFile), 'preprocess');
+        process.chdir(this.TEST_FOLDER);
         exec(util.format('%s%s/osrm-prepare %s.osrm  --profile %s/%s.lua >>%s 2>&1',
             this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.extractedFile, this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {
             if (err) {
@@ -275,6 +278,7 @@ module.exports = function () {
 
             q.awaitAll((err) => {
                 this.log('Finished preparing ' + this.osmData.preparedFile, 'preprocess');
+                process.chdir('../');
                 callback(err);
             });
         });

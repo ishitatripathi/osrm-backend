@@ -25,15 +25,15 @@ module.exports = function () {
             opts = opts.replace('{profile}', [this.PROFILES_PATH, this.profile + '.lua'].join('/'));
         }
 
-        process.chdir('./test');
         var cmd = util.format('%s%s%s/%s%s%s %s 2>%s', this.QQ, this.LOAD_LIBRARIES, this.BIN_PATH, bin, this.EXE, this.QQ, opts, this.ERROR_LOG_FILE);
+        process.chdir(this.TEST_FOLDER);
         exec(cmd, (err, stdout, stderr) => {
             this.stdout = stdout.toString();
             fs.readFile(this.ERROR_LOG_FILE, (e, data) => {
                 this.stderr = data ? data.toString() : '';
                 this.exitCode = err && err.code || 0;
-                callback(err, stdout, stderr);
                 process.chdir('../');
+                callback(err, stdout, stderr);
             });
         });
     }
