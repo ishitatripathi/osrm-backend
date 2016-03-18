@@ -328,7 +328,7 @@ module.exports = function () {
     }
 
     this.processRowsAndDiff = (table, fn, callback) => {
-        var q = d3.queue();
+        var q = d3.queue(1);
 
         table.hashes().forEach((row, i) => q.defer(fn, row, i));
 

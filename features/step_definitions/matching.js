@@ -4,7 +4,6 @@ var d3 = require('d3-queue');
 module.exports = function () {
     this.When(/^I match I should get$/, (table, callback) => {
         var actual = [],
-            response,
             got;
 
         this.reprocessAndLoadData(() => {
@@ -124,12 +123,11 @@ module.exports = function () {
                             row.matchings = extendedTarget;
                             this.logFail(row, got, { matching: {
                                 // query: query,
-                                response: response } });
+                                response: res } });
                         }
 
                         cb(null, got);
                     });
-
                 }
 
                 if (row.request) {
@@ -167,7 +165,7 @@ module.exports = function () {
                             timestamps = row.timestamps.split(' ').filter(s => !!s).map(t => parseInt(t));
                         }
                         got.trace = row.trace;
-                        response = this.requestMatching(trace, timestamps, params, afterRequest);
+                        this.requestMatching(trace, timestamps, params, afterRequest);
                     } else {
                         throw new Error('*** no trace');
                     }
