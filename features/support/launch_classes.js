@@ -35,23 +35,20 @@ var OSRMBaseLoader = class {
     }
 
     osrmIsRunning () {
-        return !!this.pid && this.child && !this.child.killed;
+        return !!this.scope.pid && this.child && !this.child.killed;
     }
 
     osrmDown (callback) {
-        // callback()
-        if (this.pid) {
-            // TODO what is up w this
-            console.log('kill', this.pid)
-            process.kill(this.pid, this.scope.TERMSIGNAL);
+        if (this.scope.pid) {
+            process.kill(this.scope.pid, this.scope.TERMSIGNAL);
             this.waitForShutdown(callback);
-            this.pid = null;
+            this.scope.pid = null;
         } else callback(true);
     }
 
     // TODO is this used?
     kill () {
-        if (this.pid) process.kill(this.pid, 'SIGKILL');
+        if (this.scope.pid) process.kill(this.scope.pid, 'SIGi');
     }
 
     waitForConnection (callback) {
@@ -86,21 +83,19 @@ var OSRMDirectLoader = class extends OSRMBaseLoader {
     load (inputFile, callback) {
         this.inputFile = inputFile;
         var startDir = process.cwd();
-        this.launch(() => {
-            this.shutdown(callback);
+        this.shutdown(() => {
+            this.launch(callback);
         });
     }
 
     osrmUp (callback) {
-        console.log('UP PID', this.pid)
-        if (this.pid) return callback();
+        if (this.scope.pid) return callback();
         var writeToLog = (data) => {
             fs.appendFileSync(this.scope.OSRM_ROUTED_LOG_FILE, data);
         }
 
-        var child = spawn(util.format('%s%s/osrm-routed', this.scope.LOAD_LIBRARIES, this.scope.BIN_PATH), [this.input_file, util.format('-p%d', this.scope.OSRM_PORT)], {detached: true});
-        console.log("PID:::::", child.pid)
-        this.pid = child.pid;
+        var child = spawn(util.format('%s%s/osrm-routed', this.scope.LOAD_LIBRARIES, this.scope.BIN_PATH), [this.inputFile, util.format('-p%d', this.scope.OSRM_PORT)], {detached: true});
+        this.scope.pid = child.pid;
         child.stdout.on('data', writeToLog);
         child.stderr.on('data', writeToLog);
 
@@ -117,7 +112,7 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
         this.inputFile = inputFile;
         var startDir = process.cwd();
         this.loadData(() => {
-            if (!this.pid) return this.launch(callback);
+            if (!this.scope.pid) return this.launch(callback);
             else callback();
         });
     }
@@ -127,16 +122,14 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
     }
 
     osrmUp (callback) {
-        console.log('UP PID', this.pid)
-        if (this.pid) return callback();
+        if (this.scope.pid) return callback();
         var writeToLog = (data) => {
             fs.appendFileSync(this.scope.OSRM_ROUTED_LOG_FILE, data);
         }
 
         var child = spawn(util.format('%s%s/osrm-routed', this.scope.LOAD_LIBRARIES, this.scope.BIN_PATH), ['--shared-memory=1', util.format('-p%d', this.scope.OSRM_PORT)], {detached: true});
         this.child = child;
-        console.log("PID:::::", child.pid)
-        this.pid = child.pid;
+        this.scope.pid = child.pid;
         child.stdout.on('data', writeToLog);
         child.stderr.on('data', writeToLog);
 
@@ -168,10 +161,6 @@ module.exports = {
         }
 
         shutdown (callback) {
-            if (!this.loader) {
-                // TODO: ??
-                console.error('what there is no loader?');
-            }
             this.loader.shutdown(callback);
         }
     }

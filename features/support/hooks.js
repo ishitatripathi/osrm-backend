@@ -41,6 +41,11 @@ module.exports = function () {
         callback();
     });
 
+    this.After((scenario, callback) => {
+        if (this.loadMethod === 'directly') this.OSRMLoader.shutdown(callback);
+        else callback();
+    });
+
     this.Around('@stress', (scenario, callback) => {
         setTimeout(callback, this.STRESS_TIMEOUT);
     });
