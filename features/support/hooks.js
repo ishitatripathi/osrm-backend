@@ -5,6 +5,7 @@ module.exports = function () {
     // this.STRESS_TIMEOUT = 300;
 
     this.BeforeFeatures((features, callback) => {
+        this.pid = null;
         this.initializeEnv(() => {
             this.initializeOptions(callback);
         });

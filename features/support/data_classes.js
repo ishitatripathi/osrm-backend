@@ -31,6 +31,7 @@ module.exports = {
                 this.fingerprintOSM = sha1(this.hash);
 
                 this.osmFile        = path.resolve(this.scope.DATA_FOLDER, this.fingerprintOSM);
+
                 this.extractedFile  = path.resolve([this.osmFile, this.scope.fingerprintExtract].join('_'));
                 this.preparedFile   = path.resolve([this.osmFile, this.scope.fingerprintExtract, this.scope.fingerprintPrepare].join('_'));
 

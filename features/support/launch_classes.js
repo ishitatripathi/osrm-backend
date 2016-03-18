@@ -10,7 +10,6 @@ var Timeout = require('node-timeout');
 var OSRMBaseLoader = class {
     constructor (scope) {
         this.scope = scope;
-        this.pid = null;
     }
 
     launch (callback) {
@@ -93,6 +92,7 @@ var OSRMDirectLoader = class extends OSRMBaseLoader {
     }
 
     osrmUp (callback) {
+        console.log('UP PID', this.pid)
         if (this.pid) return callback();
         var writeToLog = (data) => {
             fs.appendFileSync(this.scope.OSRM_ROUTED_LOG_FILE, data);
@@ -127,6 +127,7 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
     }
 
     osrmUp (callback) {
+        console.log('UP PID', this.pid)
         if (this.pid) return callback();
         var writeToLog = (data) => {
             fs.appendFileSync(this.scope.OSRM_ROUTED_LOG_FILE, data);

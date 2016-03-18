@@ -133,7 +133,7 @@ module.exports = function () {
         // TODO these are commented out in rb...?
         // clearFiles(this.TEST_FOLDER, /\.log$/);
         // clearFiles(this.DATA_FOLDER, /$test\./);
-        this.resetProfile();
+        // this.resetProfile();
         this.resetOSM();
         // this._fingerprintOSM = '';
         // TODO also class-ify

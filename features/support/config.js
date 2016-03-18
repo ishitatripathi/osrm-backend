@@ -2,6 +2,7 @@ var fs = require('fs');
 var path = require('path');
 var util = require('util');
 var sha1 = require('sha1');
+var d3 = require('d3-queue');
 var OSM = require('./build_osm');
 var classes = require('./data_classes');
 
@@ -32,26 +33,14 @@ module.exports = function () {
         // this.preparedFile = this.preparedFile || path.resolve([this.osmFile, this.fingerprintExtract, this.fingerprintPrepare].join('_'));
 
         if (!this.luaLibHash) {
-            fs.readdir(path.normalize(this.PROFILES_PATH, '/lib/'), (err, files) => {
+            fs.readdir(path.normalize(this.PROFILES_PATH + '/lib/'), (err, files) => {
                 if (err) throw err;
-                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.resolve(this.PROFILES_PATH, '/lib/', f));
-                this.luaLibHash = this.hashOfFiles(luaFiles);
+                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.normalize(this.PROFILES_PATH + '/lib/' + f));
+                this.hashOfFiles(luaFiles, (hash) => {
+                    this.luaLibHash = hash;
+                });
             });
         }
-
-        this.profileHash = this.hashProfile();
-
-        this.binExtractHash = this.binExtractHash || this.hashOfFiles(util.format('%s/osrm-extract%s', this.BIN_PATH, this.EXE));
-
-        this.binPrepareHash = this.binPrepareHash || this.hashOfFiles(util.format('%s/osrm-prepare%s', this.BIN_PATH, this.EXE));
-
-        this.binRoutedHash = this.binRoutedHash || this.hashOfFiles(util.format('%s/osrm-routed%s', this.BIN_PATH, this.EXE));
-
-        this.fingerprintExtract = this.fingerprintExtract || sha1([this.profileHash, this.luaLibHash, this.binExtractHash].join('-'));
-
-        this.fingerprintPrepare = this.fingerprintPrepare || sha1(this.binPrepareHash);
-
-        this.fingerprintRoute = this.fingerprintRoute || sha1(this.binRoutedHash);
 
         this.STRESS_TIMEOUT = 300;
 
@@ -67,18 +56,69 @@ module.exports = function () {
 
         this.shortcutsHash = this.shortcutsHash || {};
 
-        callback();
+        var hashProfile = (cb) => {
+            this.hashProfile((hash) => {
+                this.profileHash = hash;
+                cb();
+            });
+        }
+
+        var hashExtract = (cb) => {
+            this.hashOfFiles(util.format('%s/osrm-extract%s', this.BIN_PATH, this.EXE), (hash) => {
+                this.binExtractHash = hash;
+                cb();
+            });
+        }
+
+        var hashPrepare = (cb) => {
+            this.hashOfFiles(util.format('%s/osrm-prepare%s', this.BIN_PATH, this.EXE), (hash) => {
+                this.binPrepareHash = hash;
+                this.fingerprintPrepare = sha1(this.binPrepareHash);
+                cb();
+            });
+        }
+
+        var hashRouted = (cb) => {
+            this.hashOfFiles(util.format('%s/osrm-routed%s', this.BIN_PATH, this.EXE), (hash) => {
+                this.binRoutedHash = hash;
+                this.fingerprintRoute = sha1(this.binRoutedHash);
+                cb();
+            });
+        }
+
+        var q = d3.queue()
+            .defer(hashProfile)
+            .defer(hashExtract)
+            .defer(hashPrepare)
+            .defer(hashRouted)
+            .awaitAll(() => {
+                this.fingerprintExtract = sha1([this.profileHash, this.luaLibHash, this.binExtractHash].join('-'));
+                callback();
+            });
     }
 
-
-
-    this.resetProfile = () => {
-        this.profile = null;
-        this.setProfile(this.DEFAULT_SPEEDPROFILE);
+    this.setProfileBasedHashes = () => {
+        this.fingerprintExtract = sha1([this.profileHash, this.luaLibHash, this.binExtractHash].join('-'));
+        this.fingerprintPrepare = sha1(this.binPrepareHash);
     }
 
-    this.setProfile = (profile) => {
-        this.profile = profile;
+    // this.resetProfile = (cb) => {
+    //     this.profile = null;
+    //     this.setProfile(this.DEFAULT_SPEEDPROFILE, () => {
+    //         cb();
+    //     });
+    // }
+
+    this.setProfile = (profile, cb) => {
+        var lastProfile = this.profile;
+        if (profile !== lastProfile) {
+            this.profile = profile;
+            this.hashProfile((hash) => {
+                this.profileHash = hash;
+                this.setProfileBasedHashes();
+                cb();
+            });
+        } else cb();
     }
 
     this.setExtractArgs = (args) => {

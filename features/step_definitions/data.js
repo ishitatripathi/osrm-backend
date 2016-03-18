@@ -8,8 +8,7 @@ module.exports = function () {
     var DB = OSM.DB;
 
     this.Given(/^the profile "([^"]*)"$/, (profile, callback) => {
-        this.setProfile(profile);
-        callback();
+        this.setProfile(profile, callback);
     });
 
     this.Given(/^the extract extra arguments "(.*?)"$/, (args, callback) => {

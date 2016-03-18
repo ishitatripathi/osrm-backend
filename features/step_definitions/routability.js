@@ -63,6 +63,7 @@ module.exports = function () {
 
             this.requestRoute((dir === 'forw' ? [a, b] : [b, a]), [], this.queryParams, (err, res, body) => {
                 // TODO err handling
+                if (err) return callback(err);
 
                 // r.query = this.query;
                 r.json = JSON.parse(body);
