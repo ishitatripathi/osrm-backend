@@ -117,4 +117,9 @@ module.exports = function () {
     process.on('exit', () => {
         this.OSRMLoader.shutdown(() => {});
     });
+
+    process.on('SIGINT', () => {
+        process.exit(2);
+        // TODO need to handle for windows??
+    });
 }
