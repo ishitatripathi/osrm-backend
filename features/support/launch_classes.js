@@ -48,7 +48,7 @@ var OSRMBaseLoader = class {
 
     // TODO is this used?
     kill () {
-        if (this.scope.pid) process.kill(this.scope.pid, 'SIGi');
+        if (this.scope.pid) process.kill(this.scope.pid, 'SIGTERM');
     }
 
     waitForConnection (callback) {

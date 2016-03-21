@@ -32,16 +32,6 @@ module.exports = function () {
 
         // this.preparedFile = this.preparedFile || path.resolve([this.osmFile, this.fingerprintExtract, this.fingerprintPrepare].join('_'));
 
-        if (!this.luaLibHash) {
-            fs.readdir(path.normalize(this.PROFILES_PATH + '/lib/'), (err, files) => {
-                if (err) throw err;
-                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.normalize(this.PROFILES_PATH + '/lib/' + f));
-                this.hashOfFiles(luaFiles, (hash) => {
-                    this.luaLibHash = hash;
-                });
-            });
-        }
-
         this.STRESS_TIMEOUT = 300;
 
         this.OSRMLoader = this._OSRMLoader();
@@ -55,6 +45,17 @@ module.exports = function () {
         this.DESTINATION_REACHED = 15;              // OSRM instruction code
 
         this.shortcutsHash = this.shortcutsHash || {};
+
+        var hashLuaLib = (cb) => {
+            fs.readdir(path.normalize(this.PROFILES_PATH + '/lib/'), (err, files) => {
+                if (err) cb(err);
+                var luaFiles = files.filter(f => !!f.match(/\.lua$/)).map(f => path.normalize(this.PROFILES_PATH + '/lib/' + f));
+                this.hashOfFiles(luaFiles, hash => {
+                    this.luaLibHash = hash;
+                    cb();
+                })
+            });
+        }
 
         var hashProfile = (cb) => {
             this.hashProfile((hash) => {
@@ -87,6 +88,7 @@ module.exports = function () {
         }
 
         var q = d3.queue()
+            .defer(hashLuaLib)
             .defer(hashProfile)
             .defer(hashExtract)
             .defer(hashPrepare)
@@ -101,13 +103,6 @@ module.exports = function () {
         this.fingerprintExtract = sha1([this.profileHash, this.luaLibHash, this.binExtractHash].join('-'));
         this.fingerprintPrepare = sha1(this.binPrepareHash);
     }
-
-    // this.resetProfile = (cb) => {
-    //     this.profile = null;
-    //     this.setProfile(this.DEFAULT_SPEEDPROFILE, () => {
-    //         cb();
-    //     });
-    // }
 
     this.setProfile = (profile, cb) => {
         var lastProfile = this.profile;
