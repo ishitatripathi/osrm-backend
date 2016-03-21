@@ -42,6 +42,7 @@ module.exports = function () {
     });
 
     this.After((scenario, callback) => {
+        this.setExtractArgs('');
         if (this.loadMethod === 'directly') this.OSRMLoader.shutdown(callback);
         else callback();
     });
