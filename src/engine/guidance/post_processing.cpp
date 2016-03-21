@@ -20,45 +20,45 @@ namespace guidance
 
 namespace detail
 {
-bool canMergeTrivially(const PathData &destination, const PathData &source)
+bool canMergeTrivially(const RouteStep &destination, const RouteStep &source)
 {
-    return destination.exit == 0 && destination.name_id == source.name_id &&
-           destination.travel_mode == source.travel_mode && isSilent(source.turn_instruction);
+    return destination.maneuver.exit == 0 && destination.name_id == source.name_id &&
+           isSilent(source.maneuver.instruction);
 }
 
-PathData forwardInto(PathData destination, const PathData &source)
+RouteStep forwardInto(RouteStep destination, const RouteStep &source)
 {
     // Merge a turn into a silent turn
     // Overwrites turn instruction and increases exit NR
-    destination.exit = source.exit;
+    destination.maneuver.exit = source.maneuver.exit;
     return destination;
 }
 
-PathData accumulateInto(PathData destination, const PathData &source)
+RouteStep accumulateInto(RouteStep destination, const RouteStep &source)
 {
     // Merge a turn into a silent turn
     // Overwrites turn instruction and increases exit NR
     BOOST_ASSERT(canMergeTrivially(destination, source));
-    destination.exit = source.exit + 1;
+    destination.maneuver.exit = source.maneuver.exit + 1;
     return destination;
 }
 
-PathData mergeInto(PathData destination, const PathData &source)
+RouteStep mergeInto(RouteStep destination, const RouteStep &source)
 {
-    if (source.turn_instruction == TurnInstruction::NO_TURN())
+    if (source.maneuver.instruction == TurnInstruction::NO_TURN())
     {
         BOOST_ASSERT(canMergeTrivially(destination, source));
         return detail::forwardInto(destination, source);
     }
-    if (source.turn_instruction.type == TurnType::Suppressed)
+    if (source.maneuver.instruction.type == TurnType::Suppressed)
     {
         return detail::forwardInto(destination, source);
     }
-    if (source.turn_instruction.type == TurnType::StayOnRoundabout)
+    if (source.maneuver.instruction.type == TurnType::StayOnRoundabout)
     {
         return detail::forwardInto(destination, source);
     }
-    if (entersRoundabout(source.turn_instruction))
+    if (entersRoundabout(source.maneuver.instruction))
     {
         return detail::forwardInto(destination, source);
     }
@@ -67,96 +67,90 @@ PathData mergeInto(PathData destination, const PathData &source)
 
 } // namespace detail
 
-void print(const std::vector<std::vector<PathData>> &leg_data)
+void print(const std::vector<RouteStep> &steps)
 {
     std::cout << "Path\n";
-    int legnr = 0;
-    for (const auto &leg : leg_data)
+    int segment = 0;
+    for (const auto &step : steps)
     {
-        std::cout << "\tLeg: " << ++legnr << "\n";
-        int segment = 0;
-        for (const auto &data : leg)
-        {
-            const auto type = static_cast<int>(data.turn_instruction.type);
-            const auto modifier = static_cast<int>(data.turn_instruction.direction_modifier);
+        const auto type = static_cast<int>(step.maneuver.instruction.type);
+        const auto modifier = static_cast<int>(step.maneuver.instruction.direction_modifier);
 
-            std::cout << "\t\t[" << ++segment << "]: " << type << " " << modifier
-                      << " exit: " << data.exit << "\n";
-        }
+        std::cout << "\t[" << ++segment << "]: " << type << " " << modifier << " name["
+                  << step.name_id << "]: " << step.name << " Duration: " << step.duration
+                  << " Distance: " << step.distance << " Geometry" << step.geometry_begin << " "
+                  << step.geometry_end << " exit: " << step.maneuver.exit << "\n";
     }
-    std::cout << std::endl;
 }
 
-std::vector<std::vector<PathData>> postProcess(std::vector<std::vector<PathData>> leg_data)
+std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
 {
-    if (leg_data.empty())
-        return leg_data;
+    // the steps should always include the first/last step in form of a location
+    BOOST_ASSERT(steps.size() >= 2);
+    if (steps.size() == 2)
+        return steps;
 
-#define PRINT_DEBUG 0
+#define PRINT_DEBUG 1
     unsigned carry_exit = 0;
 #if PRINT_DEBUG
     std::cout << "[POSTPROCESSING ITERATION]" << std::endl;
     std::cout << "Input\n";
-    print(leg_data);
+    print(steps);
 #endif
     // Count Street Exits forward
     bool on_roundabout = false;
-    for (auto &path_data : leg_data)
+
+    for (std::size_t data_index = 0; data_index + 1 < steps.size(); ++data_index)
     {
-        if (not path_data.empty())
-            path_data[0].exit = carry_exit;
-
-        for (std::size_t data_index = 0; data_index + 1 < path_data.size(); ++data_index)
+        if (entersRoundabout(steps[data_index].maneuver.instruction))
         {
-            if (entersRoundabout(path_data[data_index].turn_instruction))
-            {
-                path_data[data_index].exit += 1;
-                on_roundabout = true;
-            }
-
-            if (isSilent(path_data[data_index].turn_instruction) &&
-                path_data[data_index].turn_instruction != TurnInstruction::NO_TURN())
-            {
-                path_data[data_index].exit += 1;
-            }
-            if (leavesRoundabout(path_data[data_index].turn_instruction))
-            {
-                if (!on_roundabout)
-                {
-                    BOOST_ASSERT(leg_data[0][0].turn_instruction.type ==
-                                 TurnInstruction::NO_TURN());
-                    if (path_data[data_index].turn_instruction.type == TurnType::ExitRoundabout)
-                        leg_data[0][0].turn_instruction.type = TurnType::EnterRoundabout;
-                    if (path_data[data_index].turn_instruction.type == TurnType::ExitRotary)
-                        leg_data[0][0].turn_instruction.type = TurnType::EnterRotary;
-                    path_data[data_index].exit += 1;
-                }
-                on_roundabout = false;
-            }
-            if (path_data[data_index].turn_instruction.type == TurnType::EnterRoundaboutAtExit)
-            {
-                path_data[data_index].exit += 1;
-                path_data[data_index].turn_instruction.type = TurnType::EnterRoundabout;
-            }
-            else if (path_data[data_index].turn_instruction.type == TurnType::EnterRotaryAtExit)
-            {
-                path_data[data_index].exit += 1;
-                path_data[data_index].turn_instruction.type = TurnType::EnterRotary;
-            }
-
-            if (isSilent(path_data[data_index].turn_instruction) ||
-                entersRoundabout(path_data[data_index].turn_instruction))
-            {
-                path_data[data_index + 1] =
-                    detail::mergeInto(path_data[data_index + 1], path_data[data_index]);
-            }
-            carry_exit = path_data[data_index].exit;
+            steps[data_index].maneuver.exit += 1;
+            on_roundabout = true;
         }
+
+        if (isSilent(steps[data_index].maneuver.instruction) &&
+            steps[data_index].maneuver.instruction != TurnInstruction::NO_TURN())
+        {
+            steps[data_index].maneuver.exit += 1;
+        }
+        if (leavesRoundabout(steps[data_index].maneuver.instruction))
+        {
+            if (!on_roundabout)
+            {
+                //the initial instruction needs to be an enter roundabout, if its the first one
+                BOOST_ASSERT(steps[0].maneuver.instruction.type == TurnInstruction::NO_TURN());
+                if (steps[data_index].maneuver.instruction.type == TurnType::ExitRoundabout)
+                    steps[0].maneuver.instruction.type = TurnType::EnterRoundabout;
+                if (steps[data_index].maneuver.instruction.type == TurnType::ExitRotary)
+                    steps[0].maneuver.instruction.type = TurnType::EnterRotary;
+                steps[data_index].maneuver.exit += 1;
+            }
+            on_roundabout = false;
+        }
+        if (steps[data_index].maneuver.instruction.type == TurnType::EnterRoundaboutAtExit)
+        {
+            steps[data_index].maneuver.exit += 1;
+            steps[data_index].maneuver.instruction.type = TurnType::EnterRoundabout;
+        }
+        else if (steps[data_index].maneuver.instruction.type == TurnType::EnterRotaryAtExit)
+        {
+            steps[data_index].maneuver.exit += 1;
+            steps[data_index].maneuver.instruction.type = TurnType::EnterRotary;
+        }
+
+        if (isSilent(steps[data_index].maneuver.instruction) ||
+            entersRoundabout(steps[data_index].maneuver.instruction))
+        {
+            steps[data_index + 1] =
+                detail::mergeInto(steps[data_index + 1], steps[data_index]);
+        }
+        carry_exit = steps[data_index].maneuver.exit;
     }
 #if PRINT_DEBUG
     std::cout << "Merged\n";
-    print(leg_data);
+    print(steps);
 #endif
+#if 0
     on_roundabout = false;
     // Move Roundabout exit numbers to front
     for (auto rev_itr = leg_data.rbegin(); rev_itr != leg_data.rend(); ++rev_itr)
@@ -164,9 +158,9 @@ std::vector<std::vector<PathData>> postProcess(std::vector<std::vector<PathData>
         auto &path_data = *rev_itr;
         for (std::size_t data_index = path_data.size(); data_index > 1; --data_index)
         {
-            if (entersRoundabout(path_data[data_index - 1].turn_instruction))
+            if (entersRoundabout(path_data[data_index - 1].maneuver.instruction))
             {
-                if (!on_roundabout && !leavesRoundabout(path_data[data_index - 1].turn_instruction))
+                if (!on_roundabout && !leavesRoundabout(path_data[data_index - 1].maneuver.instruction))
                     path_data[data_index - 1].exit = 0;
                 on_roundabout = false;
             }
@@ -174,8 +168,8 @@ std::vector<std::vector<PathData>> postProcess(std::vector<std::vector<PathData>
             {
                 path_data[data_index - 2].exit = path_data[data_index - 1].exit;
             }
-            if (leavesRoundabout(path_data[data_index - 1].turn_instruction) &&
-                !entersRoundabout(path_data[data_index - 1].turn_instruction))
+            if (leavesRoundabout(path_data[data_index - 1].maneuver.instruction) &&
+                !entersRoundabout(path_data[data_index - 1].maneuver.instruction))
             {
                 path_data[data_index - 2].exit = path_data[data_index - 1].exit;
                 on_roundabout = true;
@@ -188,26 +182,10 @@ std::vector<std::vector<PathData>> postProcess(std::vector<std::vector<PathData>
                 prev_leg->back().exit = path_data[0].exit;
         }
     }
-
-#if PRINT_DEBUG
-    std::cout << "Move To Front\n";
-    print(leg_data);
 #endif
-    // silence silent turns for good
-    for (auto &path_data : leg_data)
-    {
-        for (auto &data : path_data)
-        {
-            if (isSilent(data.turn_instruction) || (leavesRoundabout(data.turn_instruction) &&
-                                                    !entersRoundabout(data.turn_instruction)))
-            {
-                data.turn_instruction = TurnInstruction::NO_TURN();
-                data.exit = 0;
-            }
-        }
-    }
 
-    return leg_data;
+    //TODO remove silent turns
+    return steps;
 }
 
 } // namespace guidance
