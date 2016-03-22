@@ -38,15 +38,13 @@ module.exports = function () {
     }
 
     this.logFail = (expected, got, attempts) => {
-        return;          // TODO wtf??
         this.logScenarioFailInfo();
         log('== ')
-        log('Expected: ' + expected);
-        log('Got:      ' + got);
+        log('Expected: ' + JSON.stringify(expected));
+        log('Got:      ' + JSON.stringify(got));
         log();
         ['route','forw','backw'].forEach((direction) => {
             if (attempts[direction]) {
-                attempts[direction]();          // TODO wtf?
                 log('Direction: ' + direction)
                 log('Query: ' + attempts[direction].query);
                 log('Response: ' + attempts[direction].response.body);
