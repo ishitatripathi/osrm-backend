@@ -83,6 +83,7 @@ module.exports = function () {
             .defer(hashRouted)
             .awaitAll(() => {
                 this.fingerprintExtract = sha1([this.profileHash, this.luaLibHash, this.binExtractHash].join('-'));
+                this.AfterConfiguration();
                 callback();
             });
     }

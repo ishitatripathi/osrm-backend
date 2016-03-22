@@ -60,7 +60,6 @@ var OSRMBaseLoader = class {
 
     waitForShutdown (callback) {
         var check = () => {
-            // TODO this isn't working -- i think process is ending before the timeout
                 if (!this.osrmIsRunning()) callback();
             };
         setTimeout(check, 100);
@@ -152,6 +151,10 @@ module.exports = {
 
         shutdown (callback) {
             this.loader.shutdown(callback);
+        }
+
+        up () {
+            return this.loader ? this.loader.osrmIsRunning() : false;
         }
     }
 }

@@ -18,7 +18,7 @@ module.exports = function () {
         runRequest(limit((err, res, body) => {
             if (err) {
                 if (err.statusCode === 408) return callback(this.RoutedError('*** osrm-routed did not respond'));
-                else if (err.code === 'ECONNREFUSED')       // TODO is this right?
+                else if (err.code === 'ECONNREFUSED')
                     return callback(this.RoutedError('*** osrm-routed is not running'));
             } else
                 return callback(err, res, body);

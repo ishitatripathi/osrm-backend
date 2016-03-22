@@ -41,7 +41,7 @@ module.exports = function () {
 
             this.requestTable(waypoints, params, (err, response, body) => {
                 if (err) cb(err);
-                if (!response.body.length) throw Error("TODO WTF");
+                if (!response.body.length) cb(new Error('Invalid response body'));
 
                 var jsonResult = JSON.parse(response.body),
                     result = jsonResult['distance_table'].map((row, i) => {

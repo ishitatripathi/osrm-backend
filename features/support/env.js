@@ -71,20 +71,6 @@ module.exports = function () {
         callback();
     }
 
-
-    this.logTimeAndRun = (cmd) => {
-        this.logTime(cmd);
-        exec(cmd);
-    }
-
-    this.logTime = (cmd) => {
-        var d = new Date();
-        console.log(util.format('[%d-%d-%d %d:%d:%d:%d] %s'), d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds(), cmd);
-        // TODO need to fix date formats -- this prints e.g. 2016-3-5 rt 2016-03-05
-        // TODO i think this should be console... but maybe other log? rb had 'puts'
-    }
-
-
     this.verifyOSRMIsNotRunning = () => {
         if (this.OSRMLoader.up()) {
             throw new Error('*** osrm-routed is already running.');
@@ -108,7 +94,7 @@ module.exports = function () {
         });
     }
 
-    this.AfterConfiguration = (config) => {
+    this.AfterConfiguration = () => {
         this.clearLogFiles();
         this.verifyOSRMIsNotRunning();
         this.verifyExistenceOfBinaries();
