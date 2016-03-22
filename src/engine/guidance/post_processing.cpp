@@ -76,13 +76,20 @@ void print(const std::vector<RouteStep> &steps)
         const auto type = static_cast<int>(step.maneuver.instruction.type);
         const auto modifier = static_cast<int>(step.maneuver.instruction.direction_modifier);
 
-        std::cout << "\t[" << ++segment << "]: " << type << " " << modifier << " name["
-                  << step.name_id << "]: " << step.name << " Duration: " << step.duration
-                  << " Distance: " << step.distance << " Geometry" << step.geometry_begin << " "
-                  << step.geometry_end << " exit: " << step.maneuver.exit << "\n";
+        std::cout << "\t[" << ++segment << "]: " << type << " " << modifier
+                  << " Duration: " << step.duration << " Distance: " << step.distance
+                  << " Geometry: " << step.geometry_begin << " " << step.geometry_end
+                  << " exit: " << step.maneuver.exit << " name[" << step.name_id
+                  << "]: " << step.name << std::endl;
     }
 }
 
+// Every Step Maneuver consists of the information until the turn.
+// This list contains a set of instructions, called silent, which should
+// not be part of the final output.
+// They are required for maintenance purposes. We can calculate the number
+// of exits to pass in a roundabout and the number of intersections
+// that we come across.
 std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
 {
     // the steps should always include the first/last step in form of a location
@@ -91,7 +98,6 @@ std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
         return steps;
 
 #define PRINT_DEBUG 1
-    unsigned carry_exit = 0;
 #if PRINT_DEBUG
     std::cout << "[POSTPROCESSING ITERATION]" << std::endl;
     std::cout << "Input\n";
@@ -100,52 +106,116 @@ std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
     // Count Street Exits forward
     bool on_roundabout = false;
 
-    for (std::size_t data_index = 0; data_index + 1 < steps.size(); ++data_index)
+    // count the exits forward. if enter/exit roundabout happen both, no further treatment is
+    // required. We might end up with only one of them (e.g. starting within a roundabout)
+    // or having a via-point in the roundabout.
+    // In this case, exits are numbered from the start of the lag.
+    for (std::size_t step_index = 0; step_index < steps.size(); ++step_index)
     {
-        if (entersRoundabout(steps[data_index].maneuver.instruction))
+        auto &step = steps[step_index];
+        const auto instruction = step.maneuver.instruction;
+        if (entersRoundabout(step.maneuver.instruction))
         {
-            steps[data_index].maneuver.exit += 1;
-            on_roundabout = true;
-        }
-
-        if (isSilent(steps[data_index].maneuver.instruction) &&
-            steps[data_index].maneuver.instruction != TurnInstruction::NO_TURN())
-        {
-            steps[data_index].maneuver.exit += 1;
-        }
-        if (leavesRoundabout(steps[data_index].maneuver.instruction))
-        {
-            if (!on_roundabout)
+            // basic entry into a roundabout
+            step.maneuver.exit = 1;
+            // Special case handling, if an entry is directly tied to an exit
+            if (instruction.type == TurnType::EnterRotaryAtExit ||
+                instruction.type == TurnType::EnterRoundaboutAtExit)
             {
-                //the initial instruction needs to be an enter roundabout, if its the first one
-                BOOST_ASSERT(steps[0].maneuver.instruction.type == TurnInstruction::NO_TURN());
-                if (steps[data_index].maneuver.instruction.type == TurnType::ExitRoundabout)
-                    steps[0].maneuver.instruction.type = TurnType::EnterRoundabout;
-                if (steps[data_index].maneuver.instruction.type == TurnType::ExitRotary)
-                    steps[0].maneuver.instruction.type = TurnType::EnterRotary;
-                steps[data_index].maneuver.exit += 1;
+                step.maneuver.exit = 2;
+                // prevent futher special case handling of these two.
+                if (instruction.type == TurnType::EnterRotaryAtExit)
+                    step.maneuver.instruction = TurnType::EnterRotary;
+                else
+                    step.maneuver.instruction = TurnType::EnterRoundabout;
             }
-            on_roundabout = false;
+            on_roundabout = true;
+            if (step_index + 1 < steps.size())
+                steps[step_index + 1].maneuver.exit = step.maneuver.exit;
         }
-        if (steps[data_index].maneuver.instruction.type == TurnType::EnterRoundaboutAtExit)
+        else if (instruction.type == TurnType::StayOnRoundabout)
         {
-            steps[data_index].maneuver.exit += 1;
-            steps[data_index].maneuver.instruction.type = TurnType::EnterRoundabout;
+            // increase the exit number we require passing the exit
+            step.maneuver.exit += 1;
+            if (step_index + 1 < steps.size())
+                steps[step_index + 1].maneuver.exit = step.maneuver.exit;
         }
-        else if (steps[data_index].maneuver.instruction.type == TurnType::EnterRotaryAtExit)
+        else if (leavesRoundabout(instruction))
         {
-            steps[data_index].maneuver.exit += 1;
-            steps[data_index].maneuver.instruction.type = TurnType::EnterRotary;
+            if (on_roundabout)
+            {
+                // Normal exit from the roundabout. Propagate the index back to the entering
+                // location and
+                // prepare the current silent set of instructions for removal.
+                BOOST_ASSERT(step_index > 1);
+                // The very first route-step is head, so we cannot iterate past that one
+                for (std::size_t propagation_index = step_index - 1; propagation_index > 0;
+                     --propagation_index)
+                {
+                    auto &propagation_step = steps[propagation_index];
+                    if (entersRoundabout(propagation_step.maneuver.instruction))
+                    {
+                        propagation_step.maneuver.exit = step.maneuver.exit;
+                        break;
+                    }
+                    else
+                    {
+                        BOOST_ASSERT(propagation_step.maneuver.instruction.type =
+                                         TurnType::StayOnRoundabout);
+                        propagation_step.maneuver.instruction =
+                            TurnInstruction::NO_TURN(); // mark intermediate instructions invalid
+                    }
+                }
+                // remove exit
+                step.maneuver.instruction = TurnInstruction::NO_TURN();
+                on_roundabout = false;
+            }
+            else
+            {
+                // We reached a special case that requires the addition of a special route step in
+                // the beginning.
+                // We started in a roundabout, so to announce the exit, we move use the exit
+                // instruction and
+                // move it right to the beginning to make sure to immediately announce the exit.
+            }
         }
-
-        if (isSilent(steps[data_index].maneuver.instruction) ||
-            entersRoundabout(steps[data_index].maneuver.instruction))
-        {
-            steps[data_index + 1] =
-                detail::mergeInto(steps[data_index + 1], steps[data_index]);
-        }
-        carry_exit = steps[data_index].maneuver.exit;
     }
+    // unterminated roundabout
+    // Move backwards through the instructions until the start and remove the exit number
+    // A roundabout without exit translates to enter-roundabout.
+    if (on_roundabout)
+    {
+        for (std::size_t propagation_index = steps.size() - 1; propagation_index > 0;
+             --propagation_index)
+        {
+            auto &propagation_step = steps[propagation_index];
+            if (entersRoundabout(propagation_step.maneuver.instruction))
+            {
+                propagation_step.maneuver.exit = 0;
+                break;
+            }
+            else if (propagation_step.maneuver.instruction == TurnType::StayOnRoundabout)
+            {
+                propagation_step.maneuver.instruction =
+                    TurnInstruction::NO_TURN(); // mark intermediate instructions invalid
+            }
+        }
+    }
+
+    // finally clean up the post-processed instructions.
+    // Remove all, now NO_TURN instructions for the set of steps
+    auto pos = steps.begin();
+    for (auto check = steps.begin(); check != steps.end(); ++check)
+    {
+        // keep valid instrucstions
+        if (check->maneuver.instruction != TurnInstruction::NO_TURN() ||
+            check->maneuver.waypoint_type != WaypointType::None)
+        {
+            *pos = *check;
+            ++pos;
+        }
+    }
+    steps.erase(pos, steps.end());
 #if PRINT_DEBUG
     std::cout << "Merged\n";
     print(steps);
@@ -184,7 +254,7 @@ std::vector<RouteStep> postProcess(std::vector<RouteStep> steps)
     }
 #endif
 
-    //TODO remove silent turns
+    // TODO remove silent turns
     return steps;
 }
 
