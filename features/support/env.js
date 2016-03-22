@@ -7,6 +7,7 @@ module.exports = function () {
     this.initializeEnv = (callback) => {
         this.DEFAULT_PORT = 5000;
         this.DEFAULT_TIMEOUT = 2000;
+        this.setDefaultTimeout(this.DEFAULT_TIMEOUT);
         this.ROOT_FOLDER = process.cwd();
         this.OSM_USER = 'osrm';
         this.OSM_GENERATOR = 'osrm-test';
@@ -45,8 +46,7 @@ module.exports = function () {
         }
 
         console.log(util.format('Node Version', process.version));
-        // TODO see if this needs specific node version -- rb had
-        // raise "*** Please upgrade to Ruby 1.9.x to run the OSRM cucumber tests"
+        if (parseInt(process.version.match(/v(\d)/)[1]) < 4) throw new Error('*** PLease upgrade to Node 4.+ to run OSRM cucumber tests');
 
         if (process.env.OSRM_PORT) {
             this.OSRM_PORT = parseInt(process.env.OSRM_PORT);
@@ -115,7 +115,7 @@ module.exports = function () {
     }
 
     process.on('exit', () => {
-        this.OSRMLoader.shutdown(() => {});
+        if (this.OSRMLoader.loader) this.OSRMLoader.shutdown(() => {});
     });
 
     process.on('SIGINT', () => {

@@ -28,12 +28,6 @@ module.exports = function () {
     // Overwrites the default values in defaults
     // e.g. [[a, 1], [b, 2]], [[a, 5], [d, 10]] => [[a, 5], [b, 2], [d, 10]]
     this.overwriteParams = (defaults, other) => {
-        // var merged = [];
-        // defaults.forEach((dp) => {
-        //     var op = other.find(p => p[0]=== dp[0]);
-        //     merged.push(dp[0], op ? op[1] : dp[1]);
-        // });
-
         var merged = {};
         var overwrite = (o) => {
             merged[o[0]] = o[1];
@@ -43,15 +37,6 @@ module.exports = function () {
         other.forEach(overwrite);
 
         return Object.keys(merged).map((key) => [key, merged[key]]);
-
-
-        // var defaultsObj = {};
-        // defaults.forEach((dp) => { defaultsObj[dp[0]] = dp[1]; });
-        // var otherObj = {};
-        // otherObj.forEach((op) => { otherObj[op[0]] = op[1]; });
-
-        // var mergedO = Object.assign({}, defaultsObj, otherObj);
-        // return Object.keys(mergedO).map(key => [key, mergedO[key]] );
     }
 
     var encodeWaypoints = (waypoints) => {
@@ -110,21 +95,6 @@ module.exports = function () {
         }
 
         return this.requestPath('match', params, callback);
-    }
-
-    // this.gotRoute = (response) => {
-    //     if (response.statusCode === 200 && response.body.length) {
-    //         var json = JSON.parse(response.body);
-    //         if (json.status === 200) return this.wayList(json.route_instructions).length > 0;
-    //     }
-    //     return false;
-    // }
-
-    this.routeStatus = (response) => {
-        if (response.statusCode === 200 && response.body.length) {
-            var json = JSON.parse(response.body);
-            return json.status;
-        } else return 'HTTP ' + response.statusCode;
     }
 
     this.extractInstructionList = (instructions, index, postfix) => {

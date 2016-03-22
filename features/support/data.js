@@ -12,7 +12,6 @@ module.exports = function () {
         // the constant is calculated (with BigDecimal as: 1.0/(DEG_TO_RAD*EARTH_RADIUS_IN_METERS
         // see ApproximateDistance() in ExtractorStructs.h
         // it's only accurate when measuring along the equator, or going exactly north-south
-        // TODO these comments are ported directly
         this.zoom = parseFloat(meters) * 0.8990679362704610899694577444566908445396483347536032203503E-5;
     }
 
@@ -23,7 +22,7 @@ module.exports = function () {
     this.buildWaysFromTable = (table, callback) => {
         // add one unconnected way for each row
         var buildRow = (row, ri, cb) => {
-            // TODO comments ported directly
+            // comments ported directly from ruby suite:
             // NOTE: currently osrm crashes when processing an isolated oneway with just 2 nodes, so we use 4 edges
             // this is related to the fact that a oneway dead-end street doesn't make a lot of sense
 
@@ -64,13 +63,13 @@ module.exports = function () {
                 var nodeMatch = key.match(/node\/(.*)/);
                 if (nodeMatch) {
                     if (tags[key] === '(nil)') {
-                        delete nodeTags[key];    // TODO this seems useless
+                        delete nodeTags[key];
                     } else {
                         nodeTags[nodeMatch[1]] = tags[key];
                     }
                 } else {
                     if (tags[key] === '(nil)') {
-                        delete wayTags[key];    // TODO this seems useless
+                        delete wayTags[key];
                     } else {
                         wayTags[key] = tags[key];
                     }
@@ -82,7 +81,7 @@ module.exports = function () {
             this.OSMDB.addWay(way);
 
             for (var k in nodeTags) {
-                nodes[2].addTag(k, nodeTags[k]);     // TODO i wonder why only node[2] (node3) ??
+                nodes[2].addTag(k, nodeTags[k]);
             }
             cb();
         };
@@ -105,7 +104,6 @@ module.exports = function () {
     }
 
     this.addOSMNode = (name, lon, lat, id) => {
-    // function Node(id, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID, lon, lat, tags) {
         id = id || this.makeOSMId();
         var node = new OSM.Node(id, this.OSM_USER, this.OSM_TIMESTAMP, this.OSM_UID, lon, lat, {name: name});
         this.OSMDB.addNode(node);
@@ -126,7 +124,7 @@ module.exports = function () {
         } else {
             fromNode = this.locationHash[s.toString()]
         }
-        // TODO this return is right right?? didn't look like ruby did but
+
         return fromNode;
     }
 
@@ -135,16 +133,7 @@ module.exports = function () {
     }
 
     this.resetData = () => {
-        // TODO these are commented out in rb...?
-        // clearFiles(this.TEST_FOLDER, /\.log$/);
-        // clearFiles(this.DATA_FOLDER, /$test\./);
-        // this.resetProfile();
         this.resetOSM();
-        // this._fingerprintOSM = '';
-        // TODO also class-ify
-        // this.fingerprintExtract = null;
-        // this.fingerprintPrepare = null;
-        // this.fingerprintRoute = null;
     }
 
     function clearFiles (dir, re) {
@@ -166,18 +155,19 @@ module.exports = function () {
         this.nameNodeHash = {};
         this.locationHash = {};
         this.nameWayHash = {};
-        // this.osmStr.clear();
-        // this.osmHash = null;
         this.osmID = 0;
     }
 
     this.writeOSM = (callback) => {
-        // TODO un-syncify all of this
-        if (!fs.existsSync(this.DATA_FOLDER)) fs.mkdirSync(this.DATA_FOLDER);
-        var osmPath = path.resolve(this.DATA_FOLDER, util.format('%s.osm', this.osmData.osmFile));
-        if (!fs.existsSync(osmPath)) {
-            fs.writeFile(osmPath, this.osmData.str, callback);
-        } else callback();
+        fs.exists(this.DATA_FOLDER, (exists) => {
+            if (!exists) fs.mkdirSync(this.DATA_FOLDER);
+
+            var osmPath = path.resolve(this.DATA_FOLDER, util.format('%s.osm', this.osmData.osmFile));
+            fs.exists(osmPath, (exists) => {
+                if (!exists) fs.writeFile(osmPath, this.osmData.str, callback);
+                else callback();
+            });
+        });
     }
 
     this.isExtracted = (callback) => {
@@ -209,8 +199,6 @@ module.exports = function () {
     this.extractData = (callback) => {
         this.logPreprocessInfo();
         this.log(util.format('== Extracting %s.osm...', this.osmData.osmFile), 'preprocess');
-        // TODO replace with lib?? or just w runBin cmd
-        // TODOTODO tests sometimes race and hit /var/tmp/stxxl at the same time, and this doesn't fail loudly enough to stop an ENOENT error when trying to rename files that don't exist -- investigate
         process.chdir(this.TEST_FOLDER);
         exec(util.format('%s%s/osrm-extract %s.osm %s --profile %s/%s.lua >>%s 2>&1',
             this.LOAD_LIBRARIES, this.BIN_PATH, this.osmData.osmFile, this.extractArgs || '', this.PROFILES_PATH, this.profile, this.PREPROCESS_LOG_FILE), (err, stdout, stderr) => {

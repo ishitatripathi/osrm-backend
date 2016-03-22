@@ -20,18 +20,6 @@ module.exports = function () {
 
         this.osmData = new classes.osmData(this);
 
-        // this.osmStr = new classes._osmStr(this.OSMDB);
-
-        // this._fingerprintOSM = '';
-
-        // this._osmHash = '';
-
-        // this.osmFile = this.osmFile || path.resolve(this.DATA_FOLDER, this.fingerprintOSM());
-
-        // this.extractedFile = this.extractedFile || path.resolve([this.osmFile, this.fingerprintExtract].join('_'));
-
-        // this.preparedFile = this.preparedFile || path.resolve([this.osmFile, this.fingerprintExtract, this.fingerprintPrepare].join('_'));
-
         this.STRESS_TIMEOUT = 300;
 
         this.OSRMLoader = this._OSRMLoader();
@@ -42,7 +30,7 @@ module.exports = function () {
 
         this.HOST = 'http://127.0.0.1:' + this.OSRM_PORT;
 
-        this.DESTINATION_REACHED = 15;              // OSRM instruction code
+        this.DESTINATION_REACHED = 15;  // OSRM instruction code
 
         this.shortcutsHash = this.shortcutsHash || {};
 

@@ -99,7 +99,6 @@ module.exports = function () {
         var q = d3.queue();
 
         var addNode = (row, cb) => {
-            // TODO not convinced by this ^
             var name = row.node,
                 node = this.findNodeByName(name);
             delete row.node;
@@ -111,20 +110,12 @@ module.exports = function () {
         }
 
         table.hashes().forEach((row) => q.defer(addNode, row));
-            // Given /^the nodes$/ do |table|
-            //   table.hashes.each do |row|
-            //     name = row.delete 'node'
-            //     node = find_node_by_name(name)
-            //     raise "*** unknown node '#{c}'" unless node
-            //     node << row
-            //   end
-            // end
 
         q.awaitAll(callback);
     });
 
     this.Given(/^the ways$/, (table, callback) => {
-        if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenaria?');
+        if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenario?');
 
         var q = d3.queue();
 
@@ -175,7 +166,7 @@ module.exports = function () {
     });
 
     this.Given(/^the relations$/, (table, callback) => {
-        if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenaria?');
+        if (this.osm_str) throw new Error('*** Map data already defined - did you pass an input file in this scenario?');
 
         var q = d3.queue();
 

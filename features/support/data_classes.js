@@ -26,7 +26,7 @@ module.exports = {
         populate (callback) {
             this.scope.OSMDB.toXML((str) => {
                 this.str = str;
-                // TODO this is ported from the double-hash in rb, but is it an oversight?
+
                 this.hash = sha1(str);
                 this.fingerprintOSM = sha1(this.hash);
 

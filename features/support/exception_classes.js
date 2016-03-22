@@ -115,7 +115,7 @@ module.exports = {
                 s.push(rowString);
             });
 
-            return s.join('\n') + '\n\nTODO spacing/formatting';
+            return s.join('\n') + '\nTODO this is a temp workaround waiting for https://github.com/cucumber/cucumber-js/issues/534';
         }
     }
 }

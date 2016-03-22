@@ -80,5 +80,4 @@ module.exports = function () {
     this.logPreprocessDone = () => {
         log('Done with preprocessing at ' + new Date(), 'preprocess');
     }
-    // TODO delete? ^ i added this log message, was a noop
 }

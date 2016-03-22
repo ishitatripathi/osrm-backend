@@ -52,15 +52,4 @@ module.exports = function () {
             this.processRowsAndDiff(table, testRow, callback);
         });
     });
-
-    this.When(/^I request nearest (\d+) times I should get$/, (n, table) => {
-        var ok = true;
-
-        for (var i=0; i<parseInt(n); i++) {
-            // TODO see below for rb version -- i know what this should do but not pos how cucumber.js step method works
-            ok = this.step('I request nearest I should get', table);
-        }
-
-        return ok;
-    });
 }

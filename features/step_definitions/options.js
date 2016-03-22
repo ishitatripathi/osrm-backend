@@ -5,12 +5,6 @@ module.exports = function () {
         this.runBin('osrm-routed', options, (err, stdout, stderr) => {
             callback();
         });
-        // TODO does this timeout work like this? RB version was
-        // begin
-        //   Timeout.timeout(SHUTDOWN_TIMEOUT) { run_bin 'osrm-routed', options }
-        // rescue Timeout::Error
-        //   raise "*** osrm-routed didn't quit. Maybe the --trial option wasn't used?"
-        // end
     });
 
     this.When(/^I run "osrm\-extract\s?(.*?)"$/, (options, callback) => {

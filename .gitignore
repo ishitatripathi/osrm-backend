@@ -76,6 +76,7 @@ stxxl.errlog
 # Test related files #
 ######################
 /test/profile.lua
+/test/cache
 node_modules
 
 # Deprecated config file #

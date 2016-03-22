@@ -62,8 +62,6 @@ module.exports = function () {
                             got['#'] = row['#'];
                         }
 
-                        // TODO this feels like has been repeated from elsewhere.....
-
                         if (headers.has('start')) {
                             got.start = instructions ? json.route_summary.start_point : null;
                         }
@@ -142,8 +140,7 @@ module.exports = function () {
 
                         cb(null, got);
                     } else {
-                        // TODO
-                        cb(true);
+                        cb(new Error('request failed to return valid body'));
                     }
                 }
 
@@ -189,7 +186,6 @@ module.exports = function () {
                         this.requestRoute(waypoints, bearings, params, afterRequest);
                     } else if (row.waypoints) {
                         row.waypoints.split(',').forEach((n) => {
-                            // TODO again this might need to be trimmed *before* split
                             var node = this.findNodeByName(n.trim());
                             if (!node) throw new Error('*** unknown waypoint node "%s"', n.trim());
                             waypoints.push(node);

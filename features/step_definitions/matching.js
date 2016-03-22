@@ -121,9 +121,7 @@ module.exports = function () {
                         } else {
                             got.matchings = encodedResult;
                             row.matchings = extendedTarget;
-                            this.logFail(row, got, { matching: {
-                                // query: query,
-                                response: res } });
+                            this.logFail(row, got, { matching: { query: this.query, response: res } });
                         }
 
                         cb(null, got);
@@ -154,14 +152,12 @@ module.exports = function () {
 
                     if (row.trace) {
                         for (var i=0; i<row.trace.length; i++) {
-                            // TODO without trimming row.trace, am I including whitespace? may error here. the rb trims each indiv char but ??
                             var n = row.trace[i],
                                 node = this.findNodeByName(n);
                             if (!node) throw new Error(util.format('*** unknown waypoint node "%s"'), n);
                             trace.push(node);
                         }
                         if (row.timestamps) {
-                            // do i need to trim() here?
                             timestamps = row.timestamps.split(' ').filter(s => !!s).map(t => parseInt(t));
                         }
                         got.trace = row.trace;

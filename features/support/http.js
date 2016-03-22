@@ -16,11 +16,13 @@ module.exports = function () {
             var uriString = baseUri,
                 params = this.paramsToString(parameters);
 
+            this.query = baseUri + (params.length ? '?' + params : '');
+
             var options = this.httpMethod === 'POST' ? {
                 method: 'POST',
                 body: params,
                 url: baseUri
-            } : baseUri + (params.length ? '?' + params : '');
+            } : this.query;
 
             request(options, (err, res, body) => {
                 if (err && err.code === 'ECONNREFUSED') {
@@ -32,17 +34,15 @@ module.exports = function () {
                 return cb(err, res, body);
             });
         }
-        // TODO reimplement timeout
-        runRequest(callback);
 
-        // runRequest(limit((err, res, body) => {
-        //     if (err) {
-        //         if (err.statusCode === 408)
-        //             return callback(this.RoutedError('*** osrm-routed did not respond'));
-        //         else if (err.code === 'ECONNREFUSED')       // TODO is this right?
-        //             return callback(this.RoutedError('*** osrm-routed is not running'));
-        //     }
-        //     return callback(err, res, body);
-        // }));
+        runRequest(limit((err, res, body) => {
+            if (err) {
+                if (err.statusCode === 408)
+                    return callback(this.RoutedError('*** osrm-routed did not respond'));
+                else if (err.code === 'ECONNREFUSED')
+                    return callback(this.RoutedError('*** osrm-routed is not running'));
+            }
+            return callback(err, res, body);
+        }));
     }
 }

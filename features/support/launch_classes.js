@@ -5,7 +5,6 @@ var net = require('net');
 var spawn = require('child_process').spawn;
 var util = require('util');
 var Timeout = require('node-timeout');
-// var waitpid = require('waitpid');
 
 var OSRMBaseLoader = class {
     constructor (scope) {
@@ -46,11 +45,6 @@ var OSRMBaseLoader = class {
         } else callback(true);
     }
 
-    // TODO is this used?
-    kill () {
-        if (this.scope.pid) process.kill(this.scope.pid, 'SIGTERM');
-    }
-
     waitForConnection (callback) {
         var socket = net.connect({
             port: this.scope.OSRM_PORT,
@@ -70,8 +64,6 @@ var OSRMBaseLoader = class {
                 if (!this.osrmIsRunning()) callback();
             };
         setTimeout(check, 100);
-
-        // TODO I don't think the shutdown timeout is working -- managed to OOM this after ~20-30 seconds w a bad while loop
     }
 }
 
@@ -138,8 +130,6 @@ var OSRMDatastoreLoader = class extends OSRMBaseLoader {
 }
 
 module.exports = {
-    OSRMBaseLoader: OSRMBaseLoader,
-
     _OSRMLoader: class {
         constructor (scope) {
             this.scope = scope;

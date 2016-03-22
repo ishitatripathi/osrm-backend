@@ -38,7 +38,7 @@ module.exports = function () {
                             }
                         });
 
-                        if (outputRow != row) {  // TODO i'm not sure this inequality is going to work?
+                        if (outputRow != row) {
                             this.logFail(row, outputRow, result);
                         }
 
@@ -62,13 +62,11 @@ module.exports = function () {
             r.which = dir;
 
             this.requestRoute((dir === 'forw' ? [a, b] : [b, a]), [], this.queryParams, (err, res, body) => {
-                // TODO err handling
                 if (err) return callback(err);
 
-                // r.query = this.query;
+                r.query = this.query;
                 r.json = JSON.parse(body);
-                // TODO it seems this is unnecessary? refactor/remove this.routeStatus
-                r.status = this.routeStatus(res) === 200 ? 'x' : null;
+                r.status = r.json.status === 200 ? 'x' : null;
                 if (r.status) {
                     r.route = this.wayList(r.json.route_instructions);
 
@@ -77,9 +75,6 @@ module.exports = function () {
                         r.distance = r.json.route_summary.total_distance;
                         r.speed = r.time > 0 ? parseInt(3.6 * r.distance / r.time) : null;
                     } else {
-                        // if we hit the wrong one way segment, we assume
-                        // it's becaues the one we tested was not unroutable
-                        // TODO this comment tho ...?
                         r.status = null;
                     }
                 }

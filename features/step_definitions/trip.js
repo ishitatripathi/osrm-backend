@@ -57,7 +57,7 @@ module.exports = function () {
                             ok = false;
                         } else {
                             ok = false;
-                            // TODO: Check all rotations of the round trip                 <== ported comment not my TODO
+                            // TODO: Check all rotations of the round trip
                             for (var ni=0; ni<sub.length; ni++) {
                                 var node = this.findNodeByName(sub[ni]),
                                     outNode = subTrips[si][ni];
@@ -79,9 +79,7 @@ module.exports = function () {
                     } else {
                         got.trips = encodedResult;
                         got.trips = extendedTarget;
-                        this.logFail(row, got, { trip: {
-                            // query: this.query,
-                            response: res }});
+                        this.logFail(row, got, { trip: { query: this.query, response: res }});
                     }
 
                     ok = true;
@@ -95,12 +93,9 @@ module.exports = function () {
                     }
 
                     if (!ok) {
-                        this.logFail(row, got, { trip: {
-                            // query: this.query,
-                            response: res }});
+                        this.logFail(row, got, { trip: { query: this.query, response: res }});
                     }
 
-                    // TODO better error
                     cb(null, got);
                 }
 

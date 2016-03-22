@@ -31,7 +31,6 @@ class DB {
         var xml = builder.create('osm', {'encoding':'UTF-8'});
         xml.att('generator', 'osrm-test')
             .att('version', '0.6');
-        // var osm = xml.ele('osm', {'generator':'osrm-test'});
 
         this.nodes.forEach((n) => {
             var node = xml.ele('node', {
