@@ -89,7 +89,7 @@ std::vector<RouteStep> assembleSteps(const DataFacadeT &facade,
         {
             segment_duration += path_point.duration_until_turn;
 
-            if (path_point.turn_instruction != extractor::guidance::TurnInstruction::NO_TURN())
+            if (path_point.turn_instruction.type != extractor::guidance::TurnType::NoTurn)
             {
                 BOOST_ASSERT(segment_duration >= 0);
                 const auto name = facade.GetNameForID(path_point.name_id);

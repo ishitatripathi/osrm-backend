@@ -19,7 +19,6 @@ StepManeuver stepManeuverFromGeometry(extractor::guidance::TurnInstruction instr
                                       const unsigned exit)
 {
     auto turn_index = leg_geometry.BackIndex(segment_index);
-    std::cout << "Turn Index: " << turn_index << " of: " << leg_geometry.locations.size() << std::endl;
     BOOST_ASSERT(turn_index > 0);
     BOOST_ASSERT(turn_index+1 < leg_geometry.locations.size());
 
